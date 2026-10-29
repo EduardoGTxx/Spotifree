@@ -232,7 +232,8 @@ fun MainScreen(activity: MainActivity) {
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 snackbarHost = { SnackbarHost(snackbar) },
                 bottomBar = {
-                    Column {
+                    // Rewind is full screen, like stories
+                    if (destination?.hasRoute(RewindRoute::class) != true) Column {
                         if (playerState.current != null) MiniPlayer(onOpen = { showPlayer = true })
                         BottomBar(tabs, selected = { tab -> destination?.hierarchy?.any { d -> d.hasRoute(tab.route::class) } == true }) { tab ->
                             nav.navigate(tab.route) {
@@ -251,7 +252,7 @@ fun MainScreen(activity: MainActivity) {
                     composable<WorkoutRoute> { Inset { WorkoutScreen() } }
                     composable<SettingsRoute> { Inset { SettingsScreen(onBack = { nav.popBackStack() }) } }
                     composable<StatsRoute> { Inset { StatsScreen(onBack = { nav.popBackStack() }) } }
-                    composable<RewindRoute> { Inset { RewindScreen(onBack = { nav.popBackStack() }) } }
+                    composable<RewindRoute> { RewindScreen(onBack = { nav.popBackStack() }) }
                     composable<SpotifyImportRoute> { Inset { SpotifyImportScreen(onBack = { nav.popBackStack() }) } }
                     composable<YouTubeSignInRoute> { Inset { YouTubeSignInScreen(onBack = { nav.popBackStack() }) } }
                     composable<BlockedRoute> { Inset { BlockedScreen(onBack = { nav.popBackStack() }) } }
