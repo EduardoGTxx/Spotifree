@@ -1,5 +1,28 @@
 package com.spotifree.app.ui.detail
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import com.spotifree.app.ui.common.ActionPill
+import com.spotifree.app.ui.common.OutlinePill
+import com.spotifree.app.ui.common.PlayFab
+
 import com.spotifree.app.util.runCatchingCancellable
 
 import androidx.compose.foundation.layout.Column
@@ -95,21 +118,22 @@ fun CollectionScreen(url: String, initialTitle: String, onBack: () -> Unit) {
     var query by remember { mutableStateOf("") }
     var showFilter by remember { mutableStateOf(false) }
 
-    Column(Modifier.fillMaxSize()) {
-        val page = (state as? Load.Ok)?.value
-        DetailTopBar(page?.title ?: initialTitle, onBack) {
-            IconButton(onClick = { showFilter = !showFilter; if (!showFilter) query = "" }) { Icon(Icons.Default.Search, null) }
-        }
+    val page = (state as? Load.Ok)?.value
+    val headerColor = rememberHeaderColor(page?.coverUrl)
+    val listState = rememberLazyListState()
+    Box(Modifier.fillMaxSize()) {
         when (val s = state) {
-            Load.Loading -> LoadingBox()
-            is Load.Error -> EmptyState(Icons.Default.CloudOff, t("loadFailed"), s.message, action = { Button(onClick = { vm.load() }) { Text(t("retry")) } })
+            Load.Loading -> LoadingBox(Modifier.fillMaxSize())
+            is Load.Error -> EmptyState(Icons.Default.CloudOff, t("loadFailed"), s.message, Modifier.statusBarsPadding().padding(top = 56.dp),
+                action = { ActionPill(t("retry"), Icons.Default.Refresh) { vm.load() } })
             is Load.Ok -> {
                 val p = s.value
                 val shown = remember(p, query) { p.tracks.filter { matches(query, it.title, it.artist, it.album) } }
                 val isAlbum = listId?.startsWith("OLAK5uy_") == true
-                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+                LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(bottom = 24.dp)) {
                     item {
-                        DetailHeader(p.title, listOf(p.subtitle, strings.songs(p.tracks.size)).filter { it.isNotBlank() }.joinToString(" · "), p.coverUrl)
+                        DetailHeader(p.title, listOf(p.subtitle, strings.songs(p.tracks.size)).filter { it.isNotBlank() }.joinToString(" · "), p.coverUrl,
+                            color = headerColor, label = if (isAlbum) t("album") else t("playlist"))
                         PlayRow(onPlay = { actions.play(shown) }, onShuffle = { actions.play(shown, 0, true) }, enabled = shown.isNotEmpty()) {
                             IconButton(onClick = {
                                 scope.launch {
@@ -138,6 +162,9 @@ fun CollectionScreen(url: String, initialTitle: String, onBack: () -> Unit) {
                 }
             }
         }
+        CollapsingTopBar(page?.title ?: initialTitle, headerColor, listState, onBack) {
+            IconButton(onClick = { showFilter = !showFilter; if (!showFilter) query = "" }) { Icon(Icons.Default.Search, null) }
+        }
     }
 }
 
@@ -165,43 +192,59 @@ fun ArtistScreen(nameOrUrl: String, onBack: () -> Unit) {
     val player by graph.player.state.collectAsStateWithLifecycle()
     var expanded by remember { mutableStateOf(false) }
 
-    Column(Modifier.fillMaxSize()) {
-        val page = (state as? Load.Ok)?.value
-        DetailTopBar(page?.name ?: if (nameOrUrl.startsWith("http")) "" else nameOrUrl, onBack)
+    val page = (state as? Load.Ok)?.value
+    val headerColor = rememberHeaderColor(page?.imageUrl)
+    val listState = rememberLazyListState()
+    Box(Modifier.fillMaxSize()) {
         when (val s = state) {
-            Load.Loading -> LoadingBox()
-            is Load.Error -> EmptyState(Icons.Default.CloudOff, t("loadFailed"), s.message, action = { Button(onClick = { vm.load() }) { Text(t("retry")) } })
+            Load.Loading -> LoadingBox(Modifier.fillMaxSize())
+            is Load.Error -> EmptyState(Icons.Default.CloudOff, t("loadFailed"), s.message, Modifier.statusBarsPadding().padding(top = 56.dp),
+                action = { ActionPill(t("retry"), Icons.Default.Refresh) { vm.load() } })
             is Load.Ok -> {
                 val a = s.value
                 val followed by remember(a.name) { graph.library.observeIsFollowed(a.name) }.collectAsState(initial = false)
                 val top = a.topTracks.filter { !graph.library.isBlocked(it) }
-                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+                val liked by graph.library.likedIds.collectAsStateWithLifecycle()
+                LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(bottom = 24.dp)) {
                     item {
                         DetailHeader(
                             a.name,
                             if (a.subscribers > 0) strings.f("subscribers", compact(a.subscribers)) else "",
-                            a.imageUrl, coverShape = CircleShape, icon = Icons.Default.Person,
+                            a.imageUrl, color = headerColor, icon = Icons.Default.Person, label = t("artist"), artistLayout = true,
                         )
-                        PlayRow(onPlay = { actions.play(top) }, onShuffle = { actions.play(top, 0, true) }, enabled = top.isNotEmpty()) {
-                            OutlinedButton(onClick = {
+                        // Previous app: play + "Artist radio" + "Follow" pills
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            PlayFab({ actions.play(top) }, size = 52.dp, enabled = top.isNotEmpty())
+                            OutlinePill(t("artistRadio"), Icons.Default.Radio, tint = Color.White) { top.firstOrNull()?.let { actions.startRadio(it) } }
+                            OutlinePill(if (followed) t("following") else t("follow"), if (followed) Icons.Default.Check else Icons.Default.Add,
+                                tint = if (followed) c.accent else Color.White, borderColor = if (followed) c.accent else Color.White.copy(alpha = 0.3f)) {
                                 scope.launch {
                                     val now = graph.library.toggleFollow(a.name, a.imageUrl, a.url)
                                     graph.messages.post(if (now) strings.f("followingArtist", a.name) else strings.f("unfollowedArtist", a.name))
                                 }
-                            }) { Text(if (followed) t("following") else t("follow")) }
-                            IconButton(onClick = { top.firstOrNull()?.let { actions.startRadio(it) } }, enabled = top.isNotEmpty()) {
-                                Icon(Icons.Default.Radio, t("startRadio"), tint = c.textSecondary)
+                            }
+                            Spacer(Modifier.weight(1f))
+                            IconButton(onClick = { actions.play(top, 0, true) }, enabled = top.isNotEmpty()) {
+                                Icon(Icons.Default.Shuffle, t("shuffle"), tint = c.textSecondary)
                             }
                         }
                     }
                     if (top.isNotEmpty()) item { SectionTitle(t("popularSongs")) }
                     itemsIndexed(if (expanded) top else top.take(5)) { i, tr ->
                         TrackRow(tr, onClick = { actions.play(top, i) }, isCurrent = player.current?.id == tr.id, index = i + 1,
-                            onMore = { actions.showMenu(tr, MenuContext()) })
+                            onMore = { actions.showMenu(tr, MenuContext()) },
+                            trailing = {
+                                IconButton(onClick = { actions.toggleLike(tr) }) {
+                                    val isLiked = tr.id in liked
+                                    Icon(if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null,
+                                        tint = if (isLiked) c.accent else c.textSecondary, modifier = Modifier.size(22.dp))
+                                }
+                            })
                     }
                     if (top.size > 5) item {
-                        androidx.compose.material3.TextButton(onClick = { expanded = !expanded }, modifier = Modifier.padding(horizontal = 8.dp)) {
-                            Text(if (expanded) t("showLess") else t("showMore"))
+                        OutlinePill(if (expanded) t("showLess") else t("showMore"), modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                            expanded = !expanded
                         }
                     }
                     item {
@@ -213,12 +256,13 @@ fun ArtistScreen(nameOrUrl: String, onBack: () -> Unit) {
                         item {
                             SectionTitle(t("about"))
                             Text(d, color = c.textSecondary, style = MaterialTheme.typography.bodyMedium, maxLines = 8, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(horizontal = 16.dp))
+                                modifier = Modifier.padding(16.dp).clip(RoundedCornerShape(12.dp)).background(c.surface).padding(16.dp))
                         }
                     }
                 }
             }
         }
+        CollapsingTopBar(page?.name ?: if (nameOrUrl.startsWith("http")) "" else nameOrUrl, headerColor, listState, onBack)
     }
 }
 

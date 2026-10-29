@@ -10,8 +10,12 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import com.spotifree.app.R
 
 /** Extra colours the screens need besides Material's (dark theme only, like the previous app). */
 @Immutable
@@ -22,11 +26,26 @@ data class SpotifreeColors(
     val elevated: Color,
     val textSecondary: Color,
     val amoled: Boolean,
+    val textMuted: Color = Color(0xFF727272),
+    val chip: Color = Color(0x1AFFFFFF),
 )
 
 val LocalSpotifreeColors = staticCompositionLocalOf {
     SpotifreeColors(Color(0xFF2979FF), Color(0xFF121212), Color(0xFF181818), Color(0xFF282828), Color(0xFFB3B3B3), false)
 }
+
+/** Plus Jakarta Sans: the typeface of the previous app (SIL Open Font License). */
+val JakartaSans = FontFamily(
+    Font(R.font.plus_jakarta_regular, FontWeight.Normal),
+    Font(R.font.plus_jakarta_medium, FontWeight.Medium),
+    Font(R.font.plus_jakarta_semibold, FontWeight.SemiBold),
+    Font(R.font.plus_jakarta_bold, FontWeight.Bold),
+    Font(R.font.plus_jakarta_extrabold, FontWeight.ExtraBold),
+    Font(R.font.plus_jakarta_extrabold, FontWeight.Black),
+)
+
+/** Spotify's "Liked Songs" gradient. */
+val LikedGradient = listOf(Color(0xFF450AF5), Color(0xFF8E8EE5))
 
 val ACCENT_PRESETS = listOf("#2979ff", "#1db954", "#e91e63", "#ff9800", "#9c27b0", "#00bcd4", "#f44336", "#ffeb3b")
 
@@ -74,19 +93,35 @@ fun SpotifreeTheme(accentHex: String, amoled: Boolean, content: @Composable () -
         outlineVariant = Color(0xFF3E3E3E),
         error = Color(0xFFFF5252),
     )
-    val base = Typography()
-    val typography = base.copy(
-        headlineLarge = base.headlineLarge.copy(fontWeight = FontWeight.Black),
-        headlineMedium = base.headlineMedium.copy(fontWeight = FontWeight.Bold),
-        headlineSmall = base.headlineSmall.copy(fontWeight = FontWeight.Bold),
-        titleLarge = base.titleLarge.copy(fontWeight = FontWeight.Bold),
-        titleMedium = base.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-        labelSmall = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium),
-    )
+    val typography = spotifreeTypography()
     androidx.compose.runtime.CompositionLocalProvider(LocalSpotifreeColors provides colors) {
         MaterialTheme(colorScheme = scheme, typography = typography) {
             // Text outside a Surface (overlays, sheets' custom rows) must default to white on dark
             androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides Color.White, content = content)
         }
     }
+}
+
+/** Material type scale on Plus Jakarta Sans, with the tight, heavy headings of the previous app. */
+private fun spotifreeTypography(): Typography {
+    val base = Typography()
+    fun TextStyle.j(weight: FontWeight? = null, spacing: Float = -0.01f) =
+        copy(fontFamily = JakartaSans, fontWeight = weight ?: fontWeight, letterSpacing = spacing.em)
+    return Typography(
+        displayLarge = base.displayLarge.j(FontWeight.ExtraBold, -0.03f),
+        displayMedium = base.displayMedium.j(FontWeight.ExtraBold, -0.03f),
+        displaySmall = base.displaySmall.j(FontWeight.ExtraBold, -0.03f),
+        headlineLarge = base.headlineLarge.j(FontWeight.ExtraBold, -0.03f),
+        headlineMedium = base.headlineMedium.j(FontWeight.ExtraBold, -0.03f),
+        headlineSmall = base.headlineSmall.copy(fontSize = 24.sp).j(FontWeight.ExtraBold, -0.03f),
+        titleLarge = base.titleLarge.copy(fontSize = 20.sp).j(FontWeight.ExtraBold, -0.02f),
+        titleMedium = base.titleMedium.j(FontWeight.Bold),
+        titleSmall = base.titleSmall.j(FontWeight.Bold),
+        bodyLarge = base.bodyLarge.j(),
+        bodyMedium = base.bodyMedium.j(),
+        bodySmall = base.bodySmall.j(),
+        labelLarge = base.labelLarge.j(FontWeight.Bold),
+        labelMedium = base.labelMedium.j(FontWeight.SemiBold),
+        labelSmall = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.SemiBold).j(spacing = 0f),
+    )
 }

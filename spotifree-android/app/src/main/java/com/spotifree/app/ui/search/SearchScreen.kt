@@ -1,5 +1,26 @@
 package com.spotifree.app.ui.search
 
+import android.content.Intent
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Celebration
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Piano
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
+import com.spotifree.app.ui.common.CategoryCard
+import com.spotifree.app.ui.common.OutlinePill
+import com.spotifree.app.ui.common.PillRow
+
 import com.spotifree.app.util.runCatchingCancellable
 
 import android.content.Context
@@ -170,15 +191,40 @@ fun SearchScreen() {
     val focus = LocalFocusManager.current
     val c = LocalSpotifreeColors.current
 
+    val actions2 = actions
+    val strings = com.spotifree.app.ui.i18n.LocalStrings.current
+    val clipboard = LocalClipboardManager.current
+    val voice = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        val text = r.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+        if (!text.isNullOrBlank()) { vm.onQuery(text); vm.submit(text) }
+    }
+
     Column(Modifier.fillMaxSize()) {
-        Text(t("searchTitle"), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 8.dp))
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(t("searchTitle"), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+            // Previous app: paste a YouTube / YouTube Music link straight from the clipboard
+            OutlinePill(t("pasteYouTubeLink"), Icons.Default.Link, tint = c.accent, borderColor = c.accent.copy(alpha = 0.6f)) {
+                val text = clipboard.getText()?.text.orEmpty()
+                if (!actions2.openLink(text)) graph.messages.post(strings["noLinkInClipboard"], isError = true)
+            }
+        }
         TextField(
             value = ui.query,
             onValueChange = vm::onQuery,
-            placeholder = { Text(t("searchPlaceholder"), color = Color.DarkGray) },
+            placeholder = { Text(t("searchPlaceholder"), color = Color(0xFF535353), fontWeight = FontWeight.SemiBold) },
             leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Black) },
-            trailingIcon = { if (ui.query.isNotEmpty()) IconButton(onClick = vm::clear) { Icon(Icons.Default.Clear, null, tint = Color.Black) } },
+            trailingIcon = {
+                if (ui.query.isNotEmpty()) IconButton(onClick = vm::clear) { Icon(Icons.Default.Clear, null, tint = Color.Black) }
+                else IconButton(onClick = {
+                    runCatchingCancellable {
+                        voice.launch(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                            .putExtra(RecognizerIntent.EXTRA_PROMPT, strings["searchPlaceholder"]))
+                    }.onFailure { graph.messages.post(strings["voiceUnavailable"], isError = true) }
+                }) { Icon(Icons.Default.Mic, t("voiceSearch"), tint = Color.Black) }
+            },
             singleLine = true,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { vm.submit(); focus.clearFocus() }),
             shape = RoundedCornerShape(8.dp),
@@ -189,16 +235,10 @@ fun SearchScreen() {
             ),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         )
-        if (ui.submitted.isNotBlank()) {
-            val filters = listOf(null to t("filterAll"), SearchFilter.SONGS to t("filterSongs"), SearchFilter.VIDEOS to t("filterVideos"),
-                SearchFilter.ALBUMS to t("filterAlbums"), SearchFilter.ARTISTS to t("filterArtists"), SearchFilter.PLAYLISTS to t("filterPlaylists"))
-            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(filters) { (f, label) ->
-                    FilterChip(selected = ui.filter == f, onClick = { vm.setFilter(f) }, label = { Text(label) }, shape = CircleShape,
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = c.accent, selectedLabelColor = Color.Black))
-                }
-            }
-        } else Spacer(Modifier.height(8.dp))
+        // Filter pills are always visible (previous app); before searching they preselect the type
+        val filters = listOf(null to t("filterAll"), SearchFilter.SONGS to t("filterSongs"), SearchFilter.ALBUMS to t("filterAlbums"),
+            SearchFilter.ARTISTS to t("filterArtists"), SearchFilter.PLAYLISTS to t("filterPlaylists"), SearchFilter.VIDEOS to t("filterVideos"))
+        PillRow(filters, ui.filter, PaddingValues(horizontal = 16.dp, vertical = 12.dp)) { vm.setFilter(it) }
 
         Box(Modifier.weight(1f)) {
             when {
@@ -242,12 +282,7 @@ fun SearchScreen() {
                     items(GENRES.chunked(2)) { row ->
                         Row(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             row.forEach { (name, color) ->
-                                Box(
-                                    Modifier.weight(1f).height(96.dp).clip(RoundedCornerShape(8.dp))
-                                        .background(Brush.linearGradient(listOf(Color(color), Color(color).copy(alpha = 0.6f))))
-                                        .clickable { vm.submit(name) }
-                                        .padding(12.dp),
-                                ) { Text(name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium) }
+                                CategoryCard(name, Color(color), genreIcon(name), Modifier.weight(1f)) { vm.onQuery(name); vm.submit(name) }
                             }
                         }
                     }
@@ -255,6 +290,17 @@ fun SearchScreen() {
             }
         }
     }
+}
+
+private fun genreIcon(name: String): ImageVector = when (name) {
+    "Rock", "Metal" -> Icons.Default.Bolt
+    "Electrónica" -> Icons.Default.GraphicEq
+    "Hip Hop", "R&B" -> Icons.Default.Mic
+    "Jazz", "Clásica" -> Icons.Default.Piano
+    "Lo-fi" -> Icons.Default.Headphones
+    "Workout" -> Icons.Default.FitnessCenter
+    "Reggaeton", "Latina", "Salsa", "Regional Mexicano" -> Icons.Default.Celebration
+    else -> Icons.Default.MusicNote
 }
 
 @Composable
@@ -279,12 +325,13 @@ private fun Results(ui: SearchUi, currentId: String?, onRetry: () -> Unit) {
                     .clickable { actions.openArtist(top.url ?: top.name) }.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Artwork(top.imageUrl, size = 72.dp, shape = CircleShape, placeholder = Icons.Default.Search)
+                Artwork(top.imageUrl, size = 88.dp, shape = CircleShape, placeholder = Icons.Default.Person)
                 Spacer(Modifier.width(16.dp))
-                Column {
-                    Text(top.name, style = MaterialTheme.typography.titleLarge)
-                    Text(t("artist"), color = c.textSecondary)
+                Column(Modifier.weight(1f)) {
+                    Text(top.name, style = MaterialTheme.typography.headlineSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(t("artist").uppercase(), color = c.accent, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.ExtraBold)
                 }
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = c.textSecondary)
             }
         }
         if (r.songs.isNotEmpty()) {

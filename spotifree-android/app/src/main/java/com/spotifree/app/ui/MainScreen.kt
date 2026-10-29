@@ -14,6 +14,24 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,9 +46,6 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -213,32 +228,17 @@ fun MainScreen(activity: MainActivity) {
         Box(Modifier.fillMaxSize().background(c.background)) {
             Scaffold(
                 containerColor = c.background,
+                // Screens draw behind the status bar themselves (header gradients); see [Inset]
+                contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 snackbarHost = { SnackbarHost(snackbar) },
                 bottomBar = {
                     Column {
                         if (playerState.current != null) MiniPlayer(onOpen = { showPlayer = true })
-                        NavigationBar(containerColor = if (c.amoled) Color.Black else Color(0xF0121212)) {
-                            tabs.forEach { tab ->
-                                val selected = destination?.hierarchy?.any { d -> d.hasRoute(tab.route::class) } == true
-                                NavigationBarItem(
-                                    selected = selected,
-                                    onClick = {
-                                        nav.navigate(tab.route) {
-                                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    },
-                                    icon = { Icon(if (selected) tab.selectedIcon else tab.icon, null) },
-                                    label = { Text(tab.label) },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = Color.White,
-                                        selectedTextColor = Color.White,
-                                        indicatorColor = Color.Transparent,
-                                        unselectedIconColor = c.textSecondary,
-                                        unselectedTextColor = c.textSecondary,
-                                    ),
-                                )
+                        BottomBar(tabs, selected = { tab -> destination?.hierarchy?.any { d -> d.hasRoute(tab.route::class) } == true }) { tab ->
+                            nav.navigate(tab.route) {
+                                popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
                             }
                         }
                     }
@@ -246,16 +246,16 @@ fun MainScreen(activity: MainActivity) {
             ) { padding ->
                 NavHost(nav, startDestination = HomeRoute, modifier = Modifier.padding(padding)) {
                     composable<HomeRoute> { HomeScreen() }
-                    composable<SearchRoute> { SearchScreen() }
-                    composable<LibraryRoute> { LibraryScreen() }
-                    composable<WorkoutRoute> { WorkoutScreen() }
-                    composable<SettingsRoute> { SettingsScreen(onBack = { nav.popBackStack() }) }
-                    composable<StatsRoute> { StatsScreen(onBack = { nav.popBackStack() }) }
-                    composable<RewindRoute> { RewindScreen(onBack = { nav.popBackStack() }) }
-                    composable<SpotifyImportRoute> { SpotifyImportScreen(onBack = { nav.popBackStack() }) }
-                    composable<YouTubeSignInRoute> { YouTubeSignInScreen(onBack = { nav.popBackStack() }) }
-                    composable<BlockedRoute> { BlockedScreen(onBack = { nav.popBackStack() }) }
-                    composable<DownloadsManagerRoute> { DownloadsManagerScreen(onBack = { nav.popBackStack() }) }
+                    composable<SearchRoute> { Inset { SearchScreen() } }
+                    composable<LibraryRoute> { Inset { LibraryScreen() } }
+                    composable<WorkoutRoute> { Inset { WorkoutScreen() } }
+                    composable<SettingsRoute> { Inset { SettingsScreen(onBack = { nav.popBackStack() }) } }
+                    composable<StatsRoute> { Inset { StatsScreen(onBack = { nav.popBackStack() }) } }
+                    composable<RewindRoute> { Inset { RewindScreen(onBack = { nav.popBackStack() }) } }
+                    composable<SpotifyImportRoute> { Inset { SpotifyImportScreen(onBack = { nav.popBackStack() }) } }
+                    composable<YouTubeSignInRoute> { Inset { YouTubeSignInScreen(onBack = { nav.popBackStack() }) } }
+                    composable<BlockedRoute> { Inset { BlockedScreen(onBack = { nav.popBackStack() }) } }
+                    composable<DownloadsManagerRoute> { Inset { DownloadsManagerScreen(onBack = { nav.popBackStack() }) } }
                     composable<PlaylistRoute> { e -> PlaylistScreen(e.toRoute<PlaylistRoute>().id, onBack = { nav.popBackStack() }) }
                     composable<CollectionRoute> { e ->
                         val r = e.toRoute<CollectionRoute>()
@@ -281,6 +281,49 @@ fun MainScreen(activity: MainActivity) {
                 update = null
                 scope.launch { graph.settings.update { it.copy(dismissedUpdateVersion = u.version) } }
             })
+        }
+    }
+}
+
+/** Keeps a screen below the status bar (the ones with a header gradient handle it themselves). */
+@Composable
+private fun Inset(content: @Composable () -> Unit) {
+    Box(Modifier.fillMaxSize().statusBarsPadding()) { content() }
+}
+
+/** Compact bottom navigation of the previous app: small icons, bold label when active, TGym tab in accent. */
+@Composable
+private fun BottomBar(tabs: List<Tab>, selected: (Tab) -> Boolean, onSelect: (Tab) -> Unit) {
+    val c = LocalSpotifreeColors.current
+    val line = Color.White.copy(alpha = 0.06f)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(if (c.amoled) Color.Black else Color(0xFA121212))
+            .drawBehind { drawLine(line, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }
+            .navigationBarsPadding()
+            .height(60.dp),
+    ) {
+        tabs.forEach { tab ->
+            val active = selected(tab)
+            val special = tab.route == WorkoutRoute
+            val tint = when {
+                special -> c.accent
+                active -> Color.White
+                else -> c.textSecondary
+            }
+            Column(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onSelect(tab) },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Icon(if (active) tab.selectedIcon else tab.icon, tab.label, tint = tint, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.height(3.dp))
+                Text(tab.label, color = tint, fontSize = 11.sp, fontWeight = if (active) FontWeight.ExtraBold else FontWeight.Medium, maxLines = 1)
+            }
         }
     }
 }

@@ -1,6 +1,11 @@
 package com.spotifree.app.ui.player
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.material.icons.filled.Devices
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
@@ -54,10 +59,12 @@ fun MiniPlayer(onOpen: () -> Unit) {
     val c = LocalSpotifreeColors.current
     val bg by rememberCoverColor(track.artworkUrl, c.elevated)
     val drag = remember { mutableFloatStateOf(0f) }
+    var devices by remember { mutableStateOf(false) }
     Box(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
         Column(
             Modifier
                 .fillMaxWidth()
+                .shadow(10.dp, RoundedCornerShape(8.dp))
                 .clip(RoundedCornerShape(8.dp))
                 .background(bg)
                 .clickable(onClick = onOpen)
@@ -75,10 +82,15 @@ fun MiniPlayer(onOpen: () -> Unit) {
                 Artwork(track.artworkUrl, size = 42.dp)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                    Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.basicMarquee(iterations = 2, initialDelayMillis = 2500))
                     Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
                 }
-                if (state.isCasting) Icon(Icons.Default.Cast, null, tint = c.accent, modifier = Modifier.padding(horizontal = 4.dp).size(20.dp))
+                // Previous app: devices button right in the mini player
+                IconButton(onClick = { devices = true }) {
+                    Icon(if (state.isCasting) Icons.Default.Cast else Icons.Default.Devices, null,
+                        tint = if (state.isCasting) c.accent else Color.White.copy(alpha = 0.85f), modifier = Modifier.size(22.dp))
+                }
                 IconButton(onClick = { actions.toggleLike(track) }) {
                     val isLiked = track.id in liked
                     Icon(if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (isLiked) c.accent else Color.White)
@@ -92,6 +104,7 @@ fun MiniPlayer(onOpen: () -> Unit) {
                 }
             }
             val progress = if (state.durationMs > 0) (position.toFloat() / state.durationMs).coerceIn(0f, 1f) else 0f
+            if (devices) DevicesSheet(onDismiss = { devices = false })
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp).height(2.dp),

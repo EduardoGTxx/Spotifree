@@ -49,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
@@ -152,7 +153,7 @@ fun TrackRow(
         }
         Column(Modifier.weight(1f)) {
             Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                color = if (isCurrent) c.accent else Color.White, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                color = if (isCurrent) c.accent else Color.White, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (track.id in liked) {
                     Icon(Icons.Default.Favorite, null, tint = c.accent, modifier = Modifier.size(12.dp))
@@ -170,8 +171,12 @@ fun TrackRow(
 }
 
 @Composable
-fun SectionTitle(text: String, modifier: Modifier = Modifier, action: (@Composable () -> Unit)? = null) {
-    Row(modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 20.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+fun SectionTitle(text: String, modifier: Modifier = Modifier, icon: ImageVector? = null, action: (@Composable () -> Unit)? = null) {
+    Row(modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 24.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (icon != null) {
+            Icon(icon, null, tint = LocalSpotifreeColors.current.accent, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(8.dp))
+        }
         Text(text, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
         action?.invoke()
     }
@@ -187,6 +192,7 @@ fun ShelfCard(
     circle: Boolean = false,
     width: Dp = 140.dp,
     onLongClick: (() -> Unit)? = null,
+    onPlay: (() -> Unit)? = null,
 ) {
     val c = LocalSpotifreeColors.current
     Column(
@@ -196,23 +202,27 @@ fun ShelfCard(
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(4.dp),
     ) {
-        Artwork(imageUrl, size = width - 8.dp, shape = if (circle) CircleShape else RoundedCornerShape(6.dp),
-            placeholder = if (circle) Icons.Default.Person else Icons.Default.MusicNote)
+        Box {
+            Artwork(imageUrl, size = width - 8.dp, shape = if (circle) CircleShape else RoundedCornerShape(6.dp),
+                placeholder = if (circle) Icons.Default.Person else Icons.Default.MusicNote)
+            // Accent play button on the cover, like the previous app's cards
+            if (onPlay != null) PlayFab(onPlay, Modifier.align(Alignment.BottomEnd).padding(8.dp), size = 38.dp)
+        }
         Spacer(Modifier.height(8.dp))
-        Text(title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
+        Text(title, maxLines = if (subtitle.isNullOrBlank()) 2 else 1, overflow = TextOverflow.Ellipsis, fontSize = 13.sp, fontWeight = FontWeight.Bold,
             textAlign = if (circle) TextAlign.Center else TextAlign.Start, modifier = Modifier.fillMaxWidth())
         if (!subtitle.isNullOrBlank()) {
-            Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = c.textSecondary,
-                textAlign = if (circle) TextAlign.Center else TextAlign.Start, modifier = Modifier.fillMaxWidth())
+            Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 12.sp, color = c.textSecondary,
+                textAlign = if (circle) TextAlign.Center else TextAlign.Start, modifier = Modifier.fillMaxWidth().padding(top = 2.dp))
         }
     }
 }
 
 @Composable
-fun <T> Shelf(title: String, items: List<T>, card: @Composable (T) -> Unit) {
+fun <T> Shelf(title: String, items: List<T>, icon: ImageVector? = null, action: (@Composable () -> Unit)? = null, card: @Composable (T) -> Unit) {
     if (items.isEmpty()) return
-    SectionTitle(title)
-    LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    SectionTitle(title, icon = icon, action = action)
+    LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(items) { card(it) }
     }
 }
@@ -221,9 +231,9 @@ fun <T> Shelf(title: String, items: List<T>, card: @Composable (T) -> Unit) {
 fun EmptyState(icon: ImageVector, title: String, subtitle: String? = null, modifier: Modifier = Modifier, action: (@Composable () -> Unit)? = null) {
     val c = LocalSpotifreeColors.current
     Column(modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, null, tint = c.textSecondary, modifier = Modifier.size(56.dp))
+        Icon(icon, null, tint = c.accent, modifier = Modifier.size(52.dp))
         Spacer(Modifier.height(16.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center)
         if (subtitle != null) {
             Spacer(Modifier.height(6.dp))
             Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = c.textSecondary, textAlign = TextAlign.Center)

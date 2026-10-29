@@ -77,6 +77,36 @@ class AppActions(
         graph.player.playTracks(allowed, newIndex, shuffle)
     }
 
+    /** Searches [query] and plays the results (home shortcuts such as "Top hits" or "Latin hits"). */
+    fun playQuery(query: String) = scope.launch {
+        graph.messages.post(s.f("loadingQuery", query))
+        val list = runCatchingCancellable { graph.music.searchSongs(query, 25) }.getOrDefault(emptyList())
+            .filter { !graph.library.isBlocked(it) }
+        if (list.isEmpty()) graph.messages.post(s["searchFailed"], isError = true) else play(list)
+    }
+
+    /**
+     * Opens a YouTube / YouTube Music link: a video plays, a playlist or album opens, a channel opens
+     * the artist. Returns false when the text holds no YouTube link.
+     */
+    fun openLink(text: String): Boolean {
+        val url = Regex("""https?://\S+""").find(text)?.value ?: return false
+        val vid = com.spotifree.app.data.remote.YouTubeIds.videoId(url)
+        val list = com.spotifree.app.data.remote.YouTubeIds.playlistId(url)
+        when {
+            vid != null -> scope.launch {
+                val t = runCatchingCancellable { graph.music.trackInfo(vid) }.getOrNull()
+                    ?: Track(id = Track.idForVideo(vid), title = "YouTube", artist = "", videoId = vid)
+                play(listOf(t))
+                openPlayer()
+            }
+            list != null -> openCollection(com.spotifree.app.data.remote.YouTubeIds.playlistUrl(list))
+            url.contains("/channel/") || url.contains("/@") -> openArtist(url)
+            else -> return false
+        }
+        return true
+    }
+
     fun playNext(t: Track) {
         graph.player.playNext(t)
         graph.messages.post(s["addedPlayNext"])

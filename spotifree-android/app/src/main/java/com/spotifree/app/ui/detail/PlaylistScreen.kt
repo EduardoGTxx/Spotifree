@@ -1,5 +1,16 @@
 package com.spotifree.app.ui.detail
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.filled.AddCircleOutline
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material3.HorizontalDivider
+import com.spotifree.app.data.model.Track
+import com.spotifree.app.ui.common.ActionPill
+import com.spotifree.app.ui.common.SectionTitle
+import com.spotifree.app.ui.theme.LikedGradient
+
 import com.spotifree.app.util.runCatchingCancellable
 
 import android.Manifest
@@ -7,7 +18,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -49,7 +59,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.spotifree.app.data.model.Playlist
-import com.spotifree.app.data.model.Track
 import com.spotifree.app.ui.LocalActions
 import com.spotifree.app.ui.LocalGraph
 import com.spotifree.app.ui.MenuContext
@@ -144,22 +153,38 @@ fun PlaylistScreen(id: String, onBack: () -> Unit) {
     val allLiked = all.isNotEmpty() && all.all { it.id in liked }
     val allDownloaded = all.isNotEmpty() && all.filter { !it.isLocal }.all { it.id in done }
 
-    Column(Modifier.fillMaxSize()) {
-        DetailTopBar(title, onBack) {
-            IconButton(onClick = { showFilter = !showFilter; if (!showFilter) query = "" }) { Icon(Icons.Default.Search, null) }
-            IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, null) }
+    // Previous app: "Recommended" songs under your lists, one tap to add them
+    var suggestions by remember(id) { mutableStateOf<List<Track>>(emptyList()) }
+    var reloadSuggestions by remember(id) { mutableStateOf(0) }
+    val hasSeed = all.any { it.youtubeId != null }
+    LaunchedEffect(id, hasSeed, reloadSuggestions) {
+        val seedId = all.filter { it.youtubeId != null }.randomOrNull()?.youtubeId
+        if ((isUser || isLiked) && seedId != null && !graph.settings.current.offlineMode) {
+            val inList = all.map { it.id }.toSet()
+            suggestions = runCatchingCancellable { graph.music.radio(seedId, 30) }.getOrDefault(emptyList())
+                .filter { it.id !in inList && !graph.library.isBlocked(it) }.take(10)
         }
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+    }
+
+    val coverUrl = if (isUser) playlist?.coverUrl ?: all.firstNotNullOfOrNull { it.artworkUrl } else null
+    val gradient = when {
+        isLiked -> LikedGradient
+        isDownloads -> listOf(c.accent, Color(0xFF0D3B2E))
+        isDevice -> listOf(Color(0xFF535353), Color(0xFF181818))
+        else -> null
+    }
+    val headerColor = rememberHeaderColor(coverUrl, gradient)
+    val listState = rememberLazyListState()
+
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(bottom = 24.dp)) {
             item {
                 DetailHeader(
                     title = title, subtitle = subtitle,
-                    coverUrl = if (isUser) playlist?.coverUrl ?: all.firstNotNullOfOrNull { it.artworkUrl } else null,
-                    gradient = when {
-                        isLiked -> listOf(Color(0xFF450AF5), Color(0xFFC4EFD9))
-                        isDownloads -> listOf(c.accent, Color(0xFF0D3B2E))
-                        isDevice -> listOf(Color(0xFF535353), Color(0xFF181818))
-                        else -> null
-                    },
+                    coverUrl = coverUrl,
+                    color = headerColor,
+                    label = if (isUser) t("playlist") else null,
+                    gradient = gradient,
                     icon = when {
                         isLiked -> Icons.Default.Favorite
                         isDownloads -> Icons.Default.DownloadDone
@@ -183,7 +208,7 @@ fun PlaylistScreen(id: String, onBack: () -> Unit) {
             }
             if (isDevice && !hasPermission) item {
                 EmptyState(Icons.Default.PhoneAndroid, t("devicePermissionTitle"), t("devicePermissionSub"), action = {
-                    Button(onClick = { permLauncher.launch(permission) }) { androidx.compose.material3.Text(t("allow")) }
+                    ActionPill(t("allow")) { permLauncher.launch(permission) }
                 })
             } else if (tracks != null && all.isEmpty()) item {
                 EmptyState(
@@ -200,6 +225,9 @@ fun PlaylistScreen(id: String, onBack: () -> Unit) {
                         isDevice -> null
                         else -> t("playlistEmptySub")
                     },
+                    action = if (isLiked || isUser) ({
+                        ActionPill(t("goToSearch"), Icons.Default.Search) { actions.nav.navigate(com.spotifree.app.ui.SearchRoute) }
+                    }) else null,
                 )
             }
             itemsIndexed(shown) { i, tr ->
@@ -210,6 +238,30 @@ fun PlaylistScreen(id: String, onBack: () -> Unit) {
                     onMore = { actions.showMenu(tr, MenuContext(playlistId = if (isLiked) null else id)) },
                 )
             }
+            if (suggestions.isNotEmpty() && query.isBlank()) {
+                item {
+                    HorizontalDivider(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = Color.White.copy(alpha = 0.08f))
+                    SectionTitle(t("recommendedSongs"), icon = Icons.Default.AutoAwesome, action = {
+                        IconButton(onClick = { reloadSuggestions++ }) { Icon(Icons.Default.Refresh, t("refresh"), tint = c.textSecondary) }
+                    })
+                }
+                items(suggestions, key = { "s-" + it.id }) { tr ->
+                    TrackRow(tr, onClick = { actions.play(suggestions, suggestions.indexOf(tr)) }, isCurrent = player.current?.id == tr.id,
+                        onLongClick = { actions.showMenu(tr, MenuContext()) },
+                        trailing = {
+                            IconButton(onClick = {
+                                if (isLiked) actions.toggleLike(tr) else actions.addToPlaylist(id, title, listOf(tr))
+                                suggestions = suggestions - tr
+                            }) {
+                                Icon(Icons.Default.AddCircleOutline, t("addToPlaylist"), tint = c.textSecondary)
+                            }
+                        })
+                }
+            }
+        }
+        CollapsingTopBar(title, headerColor, listState, onBack) {
+            IconButton(onClick = { showFilter = !showFilter; if (!showFilter) query = "" }) { Icon(Icons.Default.Search, null) }
+            IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, null) }
         }
     }
 

@@ -1,5 +1,14 @@
 package com.spotifree.app.ui.player
 
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.filled.Cast
+import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.outlined.DownloadForOffline
+import androidx.compose.ui.unit.sp
+import com.spotifree.app.data.db.DownloadState
+import com.spotifree.app.ui.common.SeekBar
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -16,7 +25,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -183,11 +191,28 @@ private fun CoverArt(url: String?, onSwipe: (Float) -> Unit) {
 @Composable
 private fun TitleRow(title: String, artist: String, liked: Boolean, onLike: () -> Unit, onArtist: () -> Unit) {
     val c = LocalSpotifreeColors.current
+    val graph = LocalGraph.current
+    val actions = LocalActions.current
+    val track = graph.player.state.collectAsStateWithLifecycle().value.current
+    val downloads by graph.downloads.all.collectAsStateWithLifecycle()
     Row(Modifier.fillMaxWidth().padding(top = 20.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, style = MaterialTheme.typography.headlineSmall, maxLines = 1,
+                modifier = Modifier.basicMarquee(initialDelayMillis = 2000))
             Text(artist, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.clickable(onClick = onArtist))
+        }
+        // Previous app: download button beside the heart
+        if (track != null && !track.isLocal) {
+            val d = downloads[track.id]
+            IconButton(onClick = { if (d?.state != DownloadState.DONE) actions.download(track) }) {
+                when (d?.state) {
+                    DownloadState.DONE -> Icon(Icons.Default.DownloadDone, t("downloaded"), tint = c.accent, modifier = Modifier.size(28.dp))
+                    DownloadState.RUNNING, DownloadState.QUEUED -> CircularProgressIndicator(
+                        progress = { d.progress.coerceIn(0.02f, 1f) }, modifier = Modifier.size(24.dp), strokeWidth = 2.5.dp, color = c.accent)
+                    else -> Icon(Icons.Outlined.DownloadForOffline, t("download"), tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(28.dp))
+                }
+            }
         }
         IconButton(onClick = onLike) {
             Icon(if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (liked) c.accent else Color.White, modifier = Modifier.size(28.dp))
@@ -206,15 +231,11 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
     val duration = state.durationMs.coerceAtLeast(1)
     val fraction = seeking ?: (position.toFloat() / duration).coerceIn(0f, 1f)
 
-    Slider(
-        value = fraction,
-        onValueChange = { seeking = it },
-        onValueChangeFinished = {
-            seeking?.let { graph.player.seekTo((it * duration).toLong()) }
-            seeking = null
-        },
-        colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha = 0.25f)),
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    SeekBar(
+        fraction = fraction,
+        onPreview = { seeking = it },
+        onSeek = { graph.player.seekTo((it * duration).toLong()) },
+        modifier = Modifier.padding(top = 10.dp),
     )
     Row(Modifier.fillMaxWidth()) {
         Text(formatMs(seeking?.let { (it * duration).toLong() } ?: position), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
@@ -229,7 +250,7 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
             Icon(Icons.Default.SkipPrevious, null, modifier = Modifier.size(40.dp))
         }
         Box(
-            Modifier.size(68.dp).clip(CircleShape).background(Color.White),
+            Modifier.size(68.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(Color.White),
             contentAlignment = Alignment.Center,
         ) {
             IconButton(onClick = { graph.player.togglePlay() }, modifier = Modifier.fillMaxSize()) {
@@ -247,13 +268,34 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
             )
         }
     }
-    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        IconButton(onClick = { onSheet(PlayerSheet.DEVICES) }) { Icon(Icons.Default.Devices, null, tint = if (state.isCasting) c.accent else Color.White.copy(alpha = 0.8f)) }
-        IconButton(onClick = { onSheet(PlayerSheet.SLEEP) }) {
-            Icon(Icons.Default.Bedtime, null, tint = if (state.sleepMode.isNotEmpty()) c.accent else Color.White.copy(alpha = 0.8f))
+    // Previous app: labelled pills (speed, sleep timer, lyrics) between devices and queue
+    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = { onSheet(PlayerSheet.DEVICES) }) {
+            Icon(if (state.isCasting) Icons.Default.Cast else Icons.Default.Devices, t("connectDevice"),
+                tint = if (state.isCasting) c.accent else Color.White.copy(alpha = 0.85f))
         }
-        IconButton(onClick = { onSheet(PlayerSheet.EFFECTS) }) { Icon(Icons.Default.GraphicEq, null, tint = Color.White.copy(alpha = 0.8f)) }
-        IconButton(onClick = onToggleLyrics) { Icon(Icons.Default.Lyrics, null, tint = if (showLyrics) c.accent else Color.White.copy(alpha = 0.8f)) }
-        IconButton(onClick = { onSheet(PlayerSheet.QUEUE) }) { Icon(Icons.AutoMirrored.Filled.QueueMusic, null, tint = Color.White.copy(alpha = 0.8f)) }
+        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
+            val speed = if (state.speed == 1f) "1x" else "%.2fx".format(state.speed).replace(".00x", "x").replace("0x", "x")
+            PlayerPill(speed, null, active = state.speed != 1f) { onSheet(PlayerSheet.EFFECTS) }
+            PlayerPill(null, Icons.Default.Bedtime, active = state.sleepMode.isNotEmpty()) { onSheet(PlayerSheet.SLEEP) }
+            PlayerPill(null, Icons.Default.GraphicEq, active = false) { onSheet(PlayerSheet.EFFECTS) }
+            PlayerPill(if (showLyrics) t("hideLyrics") else t("lyrics"), null, active = showLyrics, onClick = onToggleLyrics)
+        }
+        IconButton(onClick = { onSheet(PlayerSheet.QUEUE) }) { Icon(Icons.AutoMirrored.Filled.QueueMusic, t("queue"), tint = Color.White.copy(alpha = 0.85f)) }
+    }
+}
+
+@Composable
+private fun PlayerPill(text: String?, icon: androidx.compose.ui.graphics.vector.ImageVector?, active: Boolean, onClick: () -> Unit) {
+    val c = LocalSpotifreeColors.current
+    Row(
+        Modifier.height(32.dp).clip(CircleShape)
+            .background(if (active) Color.White.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.1f))
+            .clickable(onClick = onClick).padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) Icon(icon, null, tint = if (active) c.accent else Color.White, modifier = Modifier.size(16.dp))
+        if (text != null) Text(text, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White,
+            maxLines = 1, modifier = Modifier.padding(start = if (icon != null) 4.dp else 0.dp))
     }
 }

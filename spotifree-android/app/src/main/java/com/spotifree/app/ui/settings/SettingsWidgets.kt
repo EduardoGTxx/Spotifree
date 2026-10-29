@@ -1,5 +1,12 @@
 package com.spotifree.app.ui.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,6 +23,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -28,6 +36,39 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+
+/** Settings group as a rounded card with an accent icon in its title (previous app). */
+@Composable
+fun SettingsCard(title: String, icon: ImageVector, content: @Composable () -> Unit) {
+    val c = LocalSpotifreeColors.current
+    Column(
+        Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White.copy(alpha = 0.04f))
+            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(16.dp))
+            .padding(vertical = 8.dp),
+    ) {
+        Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = c.accent, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(10.dp))
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+        }
+        content()
+    }
+}
+
+/** "This is how your lyrics will look" with the chosen size (previous app). */
+@Composable
+fun LyricsPreview(size: String) {
+    val fs = when (size) {
+        "sm" -> 18.sp
+        "lg" -> 26.sp
+        "xl" -> 30.sp
+        else -> 22.sp
+    }
+    Text(com.spotifree.app.ui.i18n.t("lyricsPreview"), fontSize = fs, lineHeight = fs * 1.25f, fontWeight = FontWeight.ExtraBold,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+}
 
 @Composable
 fun SettingsHeader(text: String) {
@@ -71,8 +112,7 @@ fun <T> SettingChoice(title: String, subtitle: String? = null, options: List<Pai
         if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
             options.forEach { (v, label) ->
-                FilterChip(selected = v == selected, onClick = { onSelect(v) }, label = { Text(label) },
-                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = c.accent, selectedLabelColor = Color.Black))
+                com.spotifree.app.ui.common.Pill(label, selected = v == selected, modifier = Modifier.padding(vertical = 4.dp)) { onSelect(v) }
             }
         }
     }
@@ -89,6 +129,8 @@ fun SettingSlider(title: String, valueLabel: (Float) -> String, value: Float, ra
             Text(valueLabel(local), color = c.accent)
         }
         if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
-        Slider(value = local, onValueChange = { local = it }, onValueChangeFinished = { onChange(local) }, valueRange = range, steps = steps)
+        Slider(value = local, onValueChange = { local = it }, onValueChangeFinished = { onChange(local) }, valueRange = range, steps = steps,
+            colors = SliderDefaults.colors(thumbColor = c.accent, activeTrackColor = c.accent, inactiveTrackColor = Color.White.copy(alpha = 0.15f),
+                activeTickColor = Color.Transparent, inactiveTickColor = Color.Transparent))
     }
 }
