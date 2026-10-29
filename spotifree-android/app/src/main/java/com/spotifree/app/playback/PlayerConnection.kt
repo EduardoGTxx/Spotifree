@@ -1,5 +1,12 @@
 package com.spotifree.app.playback
 
+import android.util.Log
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
+import kotlinx.coroutines.withTimeoutOrNull
+
 import com.spotifree.app.util.runCatchingCancellable
 
 import android.content.ComponentName
@@ -69,6 +76,30 @@ class PlayerConnection(private val context: Context, private val scope: Coroutin
     private val _events = MutableSharedFlow<PlayerEvent>(extraBufferCapacity = 8)
     val events: SharedFlow<PlayerEvent> = _events
 
+    /** True while some screen of the app is visible: the position is then sampled 4 times a second. */
+    @Volatile private var foreground = false
+
+    init {
+        // Lifecycle observers must be added on the main thread; the graph may be built elsewhere
+        scope.launch(Dispatchers.Main.immediate) {
+            val lifecycle = ProcessLifecycleOwner.get().lifecycle
+            foreground = lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+            lifecycle.addObserver(object : DefaultLifecycleObserver {
+                override fun onStart(owner: LifecycleOwner) {
+                    foreground = true
+                    if (controller == null) connect() else {
+                        refresh()
+                        startTicker()
+                    }
+                }
+
+                override fun onStop(owner: LifecycleOwner) {
+                    foreground = false
+                }
+            })
+        }
+    }
+
     fun connect() {
         if (future != null) return
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
@@ -105,10 +136,25 @@ class PlayerConnection(private val context: Context, private val scope: Coroutin
         _state.value = _state.value.copy(connected = false)
     }
 
+    /**
+     * Runs [block] once the controller is connected. A connection that never completes (service
+     * killed mid-bind) no longer leaves the command waiting forever: after a timeout it reconnects
+     * once, and drops the command if that fails too.
+     */
     private fun withController(block: (MediaController) -> Unit) {
         scope.launch(Dispatchers.Main) {
             connect()
-            block(ready.await())
+            val c = withTimeoutOrNull(CONNECT_TIMEOUT_MS) { ready.await() } ?: run {
+                Log.w(TAG, "MediaController did not connect, retrying")
+                release()
+                connect()
+                withTimeoutOrNull(CONNECT_TIMEOUT_MS) { ready.await() }
+            }
+            if (c == null) {
+                Log.w(TAG, "MediaController unavailable, command dropped")
+                return@launch
+            }
+            block(c)
         }
     }
 
@@ -172,7 +218,9 @@ class PlayerConnection(private val context: Context, private val scope: Coroutin
                     val d = c.duration
                     if (d > 0 && d != _state.value.durationMs) _state.value = _state.value.copy(durationMs = d)
                 }
-                delay(if (_state.value.isPlaying) 250 else 1000)
+                // Visible UI: smooth lyrics and progress. In the background only Jam and the widget
+                // read the position, so a sample per second is enough (4x fewer wake-ups).
+                delay(if (_state.value.isPlaying && foreground) 250 else 1000)
             }
         }
     }
@@ -288,6 +336,11 @@ class PlayerConnection(private val context: Context, private val scope: Coroutin
 
     fun setDucked(on: Boolean) = withController {
         it.sendCustomCommand(SessionCommand(PlaybackCommands.DUCK, Bundle.EMPTY), Bundle().apply { putBoolean(PlaybackCommands.ARG_ON, on) })
+    }
+
+    private companion object {
+        const val TAG = "PlayerConnection"
+        const val CONNECT_TIMEOUT_MS = 8_000L
     }
 
     /** Queue items by index (for the queue sheet). */

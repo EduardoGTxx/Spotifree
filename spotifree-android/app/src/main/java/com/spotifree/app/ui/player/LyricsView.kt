@@ -1,11 +1,27 @@
 package com.spotifree.app.ui.player
 
+import android.os.SystemClock
+import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.TextUnit
+import com.spotifree.app.data.lyrics.LyricsSync
+import com.spotifree.app.data.model.LyricWord
+import kotlinx.coroutines.delay
+
 import com.spotifree.app.util.runCatchingCancellable
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -138,9 +154,12 @@ fun LyricsView(track: Track, modifier: Modifier = Modifier) {
 private fun LyricsLines(lines: List<LyricLine>, synced: Boolean, translation: List<String>?, romanize: Boolean, karaoke: Boolean, fontSize: String) {
     val graph = LocalGraph.current
     val c = LocalSpotifreeColors.current
-    val position by rememberSmoothPosition()
-    val timeSec = position / 1000.0
-    val active by remember(lines) { derivedStateOf { if (synced) LrcParser.activeIndex(lines, timeSec) else -1 } }
+    // Read the clock inside derivedStateOf: the active line changes a few times per minute, so the
+    // list only recomposes then (the per-frame value is read by the karaoke line alone).
+    val position = rememberSmoothPosition()
+    val active by remember(lines, synced) {
+        derivedStateOf { if (synced) LrcParser.activeIndex(lines, position.value / 1000.0) else -1 }
+    }
     val listState = rememberLazyListState()
     val size = when (fontSize) {
         "sm" -> 18.sp
@@ -148,52 +167,94 @@ private fun LyricsLines(lines: List<LyricLine>, synced: Boolean, translation: Li
         "xl" -> 30.sp
         else -> 22.sp
     }
-    LaunchedEffect(active) {
-        if (active >= 0 && !listState.isScrollInProgress) {
-            val viewport = listState.layoutInfo.viewportSize.height
-            listState.animateScrollToItem(active, -(viewport / 3))
-        }
-    }
-    val romanized = remember(lines, romanize) { if (romanize) lines.map { Romanizer.romanize(it.text) } else null }
-    LazyColumn(state = listState, contentPadding = PaddingValues(vertical = 48.dp), modifier = Modifier.fillMaxSize()) {
-        itemsIndexed(lines) { i, line ->
-            val isActive = i == active
-            val isPast = synced && i < active
-            val color by animateColorAsState(
-                when {
-                    !synced -> Color.White
-                    isActive -> Color.White
-                    isPast -> Color.White.copy(alpha = 0.55f)
-                    else -> Color.White.copy(alpha = 0.35f)
-                }, label = "line",
-            )
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = synced) { graph.player.seekTo((line.timeSec * 1000).toLong()) }
-                    .padding(vertical = 8.dp),
-            ) {
-                val words = line.words
-                if (isActive && karaoke && !words.isNullOrEmpty()) {
-                    Text(
-                        buildAnnotatedString {
-                            words.forEach { w ->
-                                val sung = w.timeSec <= timeSec
-                                withStyle(SpanStyle(color = if (sung) Color.White else Color.White.copy(alpha = 0.4f))) { append(w.text) }
-                            }
-                        },
-                        fontSize = size, fontWeight = FontWeight.Bold, lineHeight = size * 1.25f,
-                    )
-                } else {
-                    Text(if (line.isInstrumental) LrcParser.INSTRUMENTAL else line.text, color = color, fontSize = size, fontWeight = FontWeight.Bold, lineHeight = size * 1.25f)
-                }
-                romanized?.getOrNull(i)?.takeIf { it.isNotBlank() && it != line.text }?.let {
-                    Text(it, color = color.copy(alpha = color.alpha * 0.8f), fontSize = size * 0.65f)
-                }
-                translation?.getOrNull(i)?.takeIf { it.isNotBlank() && it != line.text }?.let {
-                    Text(it, color = c.accent.copy(alpha = if (isActive || !synced) 1f else 0.6f), fontSize = size * 0.65f, fontWeight = FontWeight.Medium)
+
+    // Manual scrolling pauses auto-follow; it resumes after a few seconds without touching the list
+    var dragging by remember { mutableStateOf(false) }
+    var lastUserScrollAt by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(listState) {
+        listState.interactionSource.interactions.collect { i ->
+            when (i) {
+                is DragInteraction.Start -> dragging = true
+                is DragInteraction.Stop, is DragInteraction.Cancel -> {
+                    dragging = false
+                    lastUserScrollAt = SystemClock.elapsedRealtime()
                 }
             }
         }
     }
+    LaunchedEffect(active, dragging, lastUserScrollAt) {
+        if (active < 0 || dragging) return@LaunchedEffect
+        delay(LyricsSync.holdRemaining(SystemClock.elapsedRealtime(), lastUserScrollAt))
+        if (!LyricsSync.mayAutoScroll(SystemClock.elapsedRealtime(), dragging, lastUserScrollAt)) return@LaunchedEffect
+        val viewport = listState.layoutInfo.viewportSize.height
+        listState.animateScrollToItem(active, -(viewport / 3))
+    }
+    val activeVisible by remember { derivedStateOf { listState.layoutInfo.visibleItemsInfo.any { it.index == active } } }
+
+    val romanized = remember(lines, romanize) { if (romanize) lines.map { Romanizer.romanize(it.text) } else null }
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(state = listState, contentPadding = PaddingValues(vertical = 48.dp), modifier = Modifier.fillMaxSize()) {
+            itemsIndexed(lines) { i, line ->
+                val isActive = i == active
+                val isPast = synced && i < active
+                val color by animateColorAsState(
+                    when {
+                        !synced -> Color.White
+                        isActive -> Color.White
+                        isPast -> Color.White.copy(alpha = 0.55f)
+                        else -> Color.White.copy(alpha = 0.35f)
+                    }, label = "line",
+                )
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = synced) {
+                            lastUserScrollAt = 0L
+                            graph.player.seekTo((line.timeSec * 1000).toLong())
+                        }
+                        .padding(vertical = 8.dp),
+                ) {
+                    val words = line.words
+                    if (isActive && karaoke && !words.isNullOrEmpty()) {
+                        KaraokeLine(words, position, size)
+                    } else {
+                        Text(if (line.isInstrumental) LrcParser.INSTRUMENTAL else line.text, color = color, fontSize = size, fontWeight = FontWeight.Bold, lineHeight = size * 1.25f)
+                    }
+                    romanized?.getOrNull(i)?.takeIf { it.isNotBlank() && it != line.text }?.let {
+                        Text(it, color = color.copy(alpha = color.alpha * 0.8f), fontSize = size * 0.65f)
+                    }
+                    translation?.getOrNull(i)?.takeIf { it.isNotBlank() && it != line.text }?.let {
+                        Text(it, color = c.accent.copy(alpha = if (isActive || !synced) 1f else 0.6f), fontSize = size * 0.65f, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+        }
+        // Back to the line being sung after scrolling away from it
+        if (synced && active >= 0 && lastUserScrollAt > 0L && !activeVisible && !dragging) {
+            Row(
+                Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp).clip(CircleShape).background(Color.White)
+                    .clickable { lastUserScrollAt = 0L }.padding(horizontal = 16.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Default.MyLocation, null, tint = Color.Black, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(t("lyricsBackToLine"), color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
+        }
+    }
+}
+
+/** The line being sung, filled word by word; the only composable that reads the clock every frame. */
+@Composable
+private fun KaraokeLine(words: List<LyricWord>, position: State<Long>, size: TextUnit) {
+    val timeSec = position.value / 1000.0
+    Text(
+        buildAnnotatedString {
+            words.forEach { w ->
+                val sung = w.timeSec <= timeSec
+                withStyle(SpanStyle(color = if (sung) Color.White else Color.White.copy(alpha = 0.4f))) { append(w.text) }
+            }
+        },
+        fontSize = size, fontWeight = FontWeight.Bold, lineHeight = size * 1.25f,
+    )
 }

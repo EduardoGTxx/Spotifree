@@ -1,5 +1,10 @@
 package com.spotifree.app.data.lyrics
 
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resumeWithException
+
 import com.spotifree.app.util.runCatchingCancellable
 
 import android.util.Base64
@@ -88,6 +93,8 @@ class LyricsRepository(private val http: OkHttpClient, private val cache: CacheD
             { fromKuGou(title, artist, durationSec) },
         )
         for (p in providers) {
+            // Changing songs cancels this fetch: stop before asking the next provider
+            currentCoroutineContext().ensureActive()
             try {
                 val res = p() ?: continue
                 if (res.isSynced) {
@@ -98,7 +105,12 @@ class LyricsRepository(private val http: OkHttpClient, private val cache: CacheD
             } catch (ec: kotlin.coroutines.cancellation.CancellationException) {
                 throw ec
             } catch (e: Exception) {
-                networkError = true
+                // A provider refusing the request (403 from its firewall, 4xx) is not a connection
+                // problem: the next provider is tried and the song may still end up "not found".
+                // Timeouts, DNS errors and 5xx are transient and keep the result out of the cache.
+                val refused = e is HttpStatusException && e.code in 400..499
+                if (!refused) networkError = true
+                android.util.Log.w("LyricsRepository", "provider failed: ${e.message}")
             }
         }
         if (best != null && best.lines.isNotEmpty()) {
@@ -129,14 +141,14 @@ class LyricsRepository(private val http: OkHttpClient, private val cache: CacheD
 
     // ------------------------------------------------------------------ providers
 
-    private fun get(url: String): JsonElement? {
+    private suspend fun get(url: String): JsonElement? {
         val req = Request.Builder().url(url)
             .header("User-Agent", USER_AGENT)
             .header("Accept", "application/json")
             .build()
-        http.newCall(req).execute().use { r ->
+        http.newCall(req).await().use { r ->
             if (r.code == 404) return null
-            if (!r.isSuccessful) throw java.io.IOException("HTTP ${r.code}")
+            if (!r.isSuccessful) throw HttpStatusException(r.code)
             val body = r.body?.string() ?: return null
             return runCatchingCancellable { json.parseToJsonElement(body) }.getOrNull()
         }
@@ -145,7 +157,7 @@ class LyricsRepository(private val http: OkHttpClient, private val cache: CacheD
     private fun JsonObject.str(k: String) = this[k]?.let { if (it is JsonObject || it is JsonArray) null else it.jsonPrimitive.contentOrNull }
     private fun JsonObject.num(k: String) = this[k]?.let { if (it is JsonObject || it is JsonArray) null else it.jsonPrimitive.doubleOrNull }
 
-    private fun fromSimpMusic(videoId: String?, duration: Int): Lyrics? {
+    private suspend fun fromSimpMusic(videoId: String?, duration: Int): Lyrics? {
         if (videoId == null) return null
         val data = get("https://api-lyrics.simpmusic.org/v1/$videoId")?.jsonObject ?: return null
         val entries = (data["data"] as? JsonArray)?.mapNotNull { it as? JsonObject } ?: return null
@@ -160,7 +172,7 @@ class LyricsRepository(private val http: OkHttpClient, private val cache: CacheD
         return if (plain.isNotEmpty()) Lyrics(false, plain, "SimpMusic") else null
     }
 
-    private fun fromLrcLib(title: String, artist: String, album: String?, duration: Int): Lyrics? {
+    private suspend fun fromLrcLib(title: String, artist: String, album: String?, duration: Int): Lyrics? {
         var plainFallback: Lyrics? = null
         val main = primaryArtist(artist)
         if (artist.isNotBlank()) {
@@ -225,9 +237,9 @@ class LyricsRepository(private val http: OkHttpClient, private val cache: CacheD
         return s
     }
 
-    private fun fromKuGou(title: String, artist: String, duration: Int): Lyrics? {
+    private suspend fun fromKuGou(title: String, artist: String, duration: Int): Lyrics? {
         val keyword = kugouKeyword(primaryArtist(artist), title)
-        fun download(candidate: JsonObject?): Lyrics? {
+        suspend fun download(candidate: JsonObject?): Lyrics? {
             val id = candidate?.str("id") ?: return null
             val accessKey = candidate.str("accesskey") ?: candidate.str("accessKey") ?: return null
             val url = "https://krcs.kugou.com/download".toHttpUrl().newBuilder()
@@ -319,11 +331,11 @@ class LyricsRepository(private val http: OkHttpClient, private val cache: CacheD
         return single to detected
     }
 
-    private fun gtx(text: String, target: String): Pair<String, String?> {
+    private suspend fun gtx(text: String, target: String): Pair<String, String?> {
         val url = "https://translate.googleapis.com/translate_a/single".toHttpUrl().newBuilder()
             .addQueryParameter("client", "gtx").addQueryParameter("sl", "auto").addQueryParameter("tl", target)
             .addQueryParameter("dt", "t").addQueryParameter("q", text).build()
-        http.newCall(Request.Builder().url(url).build()).execute().use { r ->
+        http.newCall(Request.Builder().url(url).build()).await().use { r ->
             if (!r.isSuccessful) throw java.io.IOException("HTTP ${r.code}")
             val arr = json.parseToJsonElement(r.body?.string() ?: "[]").jsonArray
             val translated = arr.getOrNull(0)?.let { it as? JsonArray }?.joinToString("") { part ->
@@ -381,3 +393,23 @@ class LyricsRepository(private val http: OkHttpClient, private val cache: CacheD
         }
     }
 }
+
+/**
+ * Suspending, cancellable OkHttp call: when the coroutine is cancelled (the user skipped to
+ * another song) the HTTP request is cancelled too instead of finishing in the background.
+ */
+internal suspend fun okhttp3.Call.await(): okhttp3.Response = suspendCancellableCoroutine { cont ->
+    enqueue(object : okhttp3.Callback {
+        override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
+            cont.resume(response) { _, value, _ -> value.close() }
+        }
+
+        override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+            if (!cont.isCancelled) cont.resumeWithException(e)
+        }
+    })
+    cont.invokeOnCancellation { runCatching { cancel() } }
+}
+
+/** Non-2xx answer of a lyrics provider. */
+internal class HttpStatusException(val code: Int) : java.io.IOException("HTTP $code")

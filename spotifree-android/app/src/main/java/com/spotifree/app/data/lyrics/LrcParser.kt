@@ -23,7 +23,8 @@ object LrcParser {
         if (lrc.isNullOrBlank()) return emptyList()
         var offsetMs = 0
         val result = ArrayList<LyricLine>()
-        for (raw in lrc.replace("\r\n", "\n").replace('\r', '\n').split('\n')) {
+        // A UTF-8 byte-order mark would hide the first time tag (the line would be dropped)
+        for (raw in lrc.replace("\uFEFF", "").replace("\r\n", "\n").replace('\r', '\n').split('\n')) {
             val line = raw.trim()
             if (line.isEmpty()) continue
             OFFSET.find(line)?.let {
@@ -101,7 +102,7 @@ object LrcParser {
 
     fun parsePlain(text: String?): List<LyricLine> {
         if (text.isNullOrBlank()) return emptyList()
-        return text.replace("\r\n", "\n").split('\n').map { decodeEntities(it.trim()) }.filter { it.isNotEmpty() }
+        return text.replace("\uFEFF", "").replace("\r\n", "\n").split('\n').map { decodeEntities(it.trim()) }.filter { it.isNotEmpty() }
             .mapIndexed { i, t -> LyricLine(i * 5.0, t) }
     }
 

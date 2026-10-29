@@ -91,9 +91,17 @@ class CollectionViewModel(private val graph: AppGraph, private val url: String) 
     private val _state = MutableStateFlow<Load<CollectionPage>>(Load.Loading)
     val state: StateFlow<Load<CollectionPage>> = _state
 
+    private var job: kotlinx.coroutines.Job? = null
+
     init { load() }
 
-    fun load() = viewModelScope.launch {
+    /** A retry cancels the request still running, so only the newest answer is shown. */
+    fun load() {
+        job?.cancel()
+        job = viewModelScope.launch { loadNow() }
+    }
+
+    private suspend fun loadNow() {
         _state.value = Load.Loading
         _state.value = runCatchingCancellable { graph.music.collection(url) }.fold(
             { p -> Load.Ok(p.copy(tracks = p.tracks.filter { !graph.library.isBlocked(it) })) },
@@ -172,9 +180,16 @@ class ArtistViewModel(private val graph: AppGraph, private val nameOrUrl: String
     private val _state = MutableStateFlow<Load<ArtistPage>>(Load.Loading)
     val state: StateFlow<Load<ArtistPage>> = _state
 
+    private var job: kotlinx.coroutines.Job? = null
+
     init { load() }
 
-    fun load() = viewModelScope.launch {
+    fun load() {
+        job?.cancel()
+        job = viewModelScope.launch { loadNow() }
+    }
+
+    private suspend fun loadNow() {
         _state.value = Load.Loading
         _state.value = runCatchingCancellable { graph.music.artist(nameOrUrl) }.fold({ Load.Ok(it) }, { Load.Error(it.message ?: "error") })
     }

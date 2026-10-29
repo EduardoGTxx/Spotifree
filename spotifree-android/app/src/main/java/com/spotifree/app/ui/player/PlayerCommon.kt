@@ -1,6 +1,8 @@
 package com.spotifree.app.ui.player
 
 import android.graphics.Bitmap
+import android.os.SystemClock
+import com.spotifree.app.data.lyrics.LyricsSync
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -49,21 +51,25 @@ fun rememberCoverColor(url: String?, fallback: Color): State<Color> {
     }
 }
 
-/** Playback position that advances every frame between the controller's 250 ms updates (smooth karaoke). */
+/**
+ * Playback position that advances every frame between the controller's samples (smooth karaoke).
+ * Uses the monotonic clock, ignores the few-ms backward corrections of each new sample and
+ * follows real seeks immediately (see [LyricsSync.smooth]).
+ */
 @Composable
 fun rememberSmoothPosition(): State<Long> {
     val graph = LocalGraph.current
     val base by graph.player.position.collectAsStateWithLifecycle()
     val state by graph.player.state.collectAsStateWithLifecycle()
-    val stamp = remember(base) { System.currentTimeMillis() }
     val out = remember { mutableLongStateOf(base) }
     LaunchedEffect(base, state.isPlaying, state.speed) {
-        out.longValue = base
+        val stamp = SystemClock.elapsedRealtime()
+        out.longValue = LyricsSync.smooth(out.longValue, base, state.isPlaying)
         if (!state.isPlaying) return@LaunchedEffect
         while (true) {
             withFrameMillis { }
-            val elapsed = ((System.currentTimeMillis() - stamp) * state.speed).toLong()
-            out.longValue = base + elapsed.coerceAtMost(1500)
+            val elapsed = ((SystemClock.elapsedRealtime() - stamp) * state.speed).toLong().coerceIn(0L, 1500L)
+            out.longValue = LyricsSync.smooth(out.longValue, base + elapsed, true)
         }
     }
     return out

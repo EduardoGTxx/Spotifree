@@ -90,7 +90,9 @@ import com.spotifree.app.ui.common.ShelfCard
 import com.spotifree.app.ui.common.TrackRow
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -110,12 +112,20 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
     private val _feed = MutableStateFlow(HomeFeed())
     val feed: StateFlow<HomeFeed> = _feed
 
+    private var loadJob: Job? = null
+
     init { load() }
 
-    fun load() = viewModelScope.launch {
+    /** Reloads the feed; a newer load cancels the previous one so a slow old answer can't overwrite it. */
+    fun load() {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch { loadNow() }
+    }
+
+    private suspend fun loadNow() = coroutineScope {
         if (graph.settings.current.offlineMode) {
             _feed.value = HomeFeed(loading = false)
-            return@launch
+            return@coroutineScope
         }
         _feed.value = _feed.value.copy(loading = true)
         val recent = runCatchingCancellable { graph.library.observeRecent(15).first() }.getOrDefault(emptyList())
