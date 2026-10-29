@@ -1,0 +1,25 @@
+# Android / Gradle
+.gradle/
+**/build/
+.kotlin/
+.idea/
+*.iml
+local.properties
+captures/
+.externalNativeBuild
+.cxx
+.DS_Store
+
+# Node (jam-server)
+node_modules/
+.env.local
+
+# Llave de firma y APKs: nunca en el repositorio (el workflow los genera y los publica en Releases)
+*.keystore
+*.jks
+keystore.properties
+*.apk
+*.aab
+
+# Herramientas locales de compilación
+_audit/

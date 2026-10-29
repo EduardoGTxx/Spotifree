@@ -1,0 +1,44 @@
+name: CI
+
+# Cada push a main y cada pull request: pruebas y APK de prueba (no se publica).
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'docs/**']
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: spotifree-android
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Pruebas y APK de depuración
+        run: |
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest assembleDebug --no-daemon
+
+      - name: Resultados de las pruebas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: spotifree-android/app/build/test-results/
+          if-no-files-found: ignore
+
+      - name: APK de depuración
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotifree-debug-apk
+          path: spotifree-android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14

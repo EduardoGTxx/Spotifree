@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Spotifree</string>
+    <string name="like">J\'aime</string>
+    <string name="unlike">Retirer des titres likés</string>
+    <string name="liked_songs">Titres likés</string>
+    <string name="downloads">Téléchargements</string>
+    <string name="playlists">Playlists</string>
+    <string name="recently_played">Écoutés récemment</string>
+    <string name="cast_cannot_play">Ce titre ne peut pas être envoyé au Chromecast</string>
+    <string name="widget_idle">Aucune lecture</string>
+    <string name="widget_description">Commandes de lecture Spotifree</string>
+    <string name="channel_playback">Lecture</string>
+    <string name="channel_downloads">Téléchargements</string>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AppCompat parent: needed by the Cast MediaRouteButton and per-app language. Compose draws everything else. -->
+    <style name="Theme.Spotifree" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/spotifree_window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="colorPrimary">#FF2979FF</item>
+        <item name="colorAccent">#FF2979FF</item>
+    </style>
+</resources>

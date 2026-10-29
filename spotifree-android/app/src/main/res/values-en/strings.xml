@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Spotifree</string>
+    <string name="like">Like</string>
+    <string name="unlike">Remove like</string>
+    <string name="liked_songs">Liked Songs</string>
+    <string name="downloads">Downloads</string>
+    <string name="playlists">Playlists</string>
+    <string name="recently_played">Recently played</string>
+    <string name="cast_cannot_play">This song can\'t be sent to the Chromecast</string>
+    <string name="widget_idle">Nothing playing</string>
+    <string name="widget_description">Spotifree playback controls</string>
+    <string name="channel_playback">Playback</string>
+    <string name="channel_downloads">Downloads</string>
+</resources>

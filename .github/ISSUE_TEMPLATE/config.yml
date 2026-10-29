@@ -1,0 +1,6 @@
+# The title that appears above the templates
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Integraciones (Drive, ¿Qué suena?, Jam, Chromecast, TGym)
+    url: https://github.com/EduardoGTxx/Spotifree/blob/main/docs/INTEGRACIONES.md
+    about: Revisa la guía de configuración antes de abrir un issue.
