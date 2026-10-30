@@ -331,24 +331,37 @@ class PlaybackService : MediaLibraryService() {
 
     // ------------------------------------------------------------------ radio / prefetch
 
-    private fun maybeQueueRadio(force: Boolean = false, playAfter: Boolean = false) {
+    private fun maybeQueueRadio(force: Boolean = false, playAfter: Boolean = false, seedTrackId: String? = null) {
         val s = graph.settings.current
-        if (!s.autoplayRadio || s.offlineMode) return
+        if ((!force && !s.autoplayRadio) || s.offlineMode) return
         if (player.repeatMode != Player.REPEAT_MODE_OFF || sessionPlayer.shuffleModeEnabled && !force) return
         val remaining = player.mediaItemCount - player.currentMediaItemIndex - 1
         if (!force && remaining > 1) return
-        val seedItem = player.currentMediaItem ?: (if (player.mediaItemCount > 0) player.getMediaItemAt(player.mediaItemCount - 1) else null) ?: return
-        val seed = MediaItems.toTrack(seedItem)
+        val seed = seedTrackId?.let { id ->
+            (0 until player.mediaItemCount)
+                .map { MediaItems.toTrack(player.getMediaItemAt(it)) }
+                .firstOrNull { it.id == id }
+        } ?: run {
+            val seedItem = player.currentMediaItem ?: (if (player.mediaItemCount > 0) player.getMediaItemAt(player.mediaItemCount - 1) else null) ?: return
+            MediaItems.toTrack(seedItem)
+        }
         if (radioJob?.isActive == true || radioSeedId == seed.id) return
         radioSeedId = seed.id
         radioJob = scope.launch {
             val resolvedSeed = seed.youtubeId?.let { seed } ?: graph.library.track(seed.id)?.let { graph.library.resolveOnYouTube(it) }
-            val vid = resolvedSeed?.youtubeId ?: return@launch
+            val vid = resolvedSeed?.youtubeId
             val existing = HashSet<String>()
             for (i in 0 until player.mediaItemCount) existing += player.getMediaItemAt(i).mediaId
-            val radio = withContext(Dispatchers.IO) { runCatchingCancellable { graph.music.radio(vid) }.getOrDefault(emptyList()) }
-                .filter { it.id !in existing && !graph.library.isBlocked(it) }
-                .take(20)
+            var radio = if (vid != null) {
+                withContext(Dispatchers.IO) { runCatchingCancellable { graph.music.radio(vid) }.getOrDefault(emptyList()) }
+                    .filter { it.id !in existing && !graph.library.isBlocked(it) }
+                    .take(20)
+            } else emptyList()
+            if (radio.isEmpty()) {
+                val pool = graph.library.sampleTracks(20, excludeId = seed.id)
+                    .filter { it.id !in existing }
+                radio = pool
+            }
             if (radio.isEmpty()) return@launch
             graph.library.saveAll(radio)
             val wasEnded = player.playbackState == Player.STATE_ENDED
@@ -555,8 +568,9 @@ class PlaybackService : MediaLibraryService() {
                     }
                 }
                 PlaybackCommands.START_RADIO -> {
+                    val trackId = args.getString(PlaybackCommands.ARG_TRACK_ID)
                     radioSeedId = null
-                    maybeQueueRadio(force = true)
+                    maybeQueueRadio(force = true, seedTrackId = trackId)
                 }
                 PlaybackCommands.DUCK -> setDucked(args.getBoolean(PlaybackCommands.ARG_ON))
                 PlaybackCommands.APPLY_SETTINGS -> applySettings(graph.settings.current)

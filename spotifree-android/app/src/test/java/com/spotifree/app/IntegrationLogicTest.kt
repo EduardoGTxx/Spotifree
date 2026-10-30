@@ -98,4 +98,26 @@ class IntegrationLogicTest {
         assertTrue(ArtworkResolver.matches("Rosalía", "DESPECHÁ", "ROSALÍA", "Despechá (Remix)"))
         assertFalse(ArtworkResolver.matches("Coldplay", "Yellow", "Bad Bunny", "Yellow"))
     }
+
+    @Test
+    fun splitArtistsHandlesSeparators() {
+        val artists = com.spotifree.app.data.library.LibraryRepository.splitArtists("Artist A, Artist B & Artist C feat. Artist D")
+        assertEquals(listOf("artist a", "artist b", "artist c", "artist d"), artists)
+    }
+
+    @Test
+    fun searchQueueSeedingFiltersDuplicatesAndBlocked() {
+        val seed = com.spotifree.app.data.model.Track(id = "seed-1", title = "Hit Song", artist = "Artist A")
+        val blockedId = "blocked-9"
+        val existingQueueIds = setOf("seed-1", "other-already-in-queue")
+        val searchPool = listOf(
+            com.spotifree.app.data.model.Track(id = "seed-1", title = "Hit Song", artist = "Artist A"),
+            com.spotifree.app.data.model.Track(id = "other-already-in-queue", title = "Old", artist = "Artist B"),
+            com.spotifree.app.data.model.Track(id = blockedId, title = "Blocked Song", artist = "Bad"),
+            com.spotifree.app.data.model.Track(id = "rec-1", title = "Similar 1", artist = "Artist C"),
+            com.spotifree.app.data.model.Track(id = "rec-2", title = "Similar 2", artist = "Artist D"),
+        )
+        val filtered = searchPool.filter { it.id !in existingQueueIds && it.id != blockedId }
+        assertEquals(listOf("rec-1", "rec-2"), filtered.map { it.id })
+    }
 }

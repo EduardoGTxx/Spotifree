@@ -77,6 +77,29 @@ class AppActions(
         graph.player.playTracks(allowed, newIndex, shuffle)
     }
 
+    /**
+     * Plays [t] as a single song (e.g. from search results) and seeds the queue with similar / radio songs
+     * instead of dumping all search query matches into the queue.
+     */
+    fun playFromSearch(t: Track) {
+        if (graph.library.isBlocked(t)) return
+        val offline = graph.settings.current.offlineMode
+        if (offline) {
+            val done = graph.downloads.doneIds.value
+            if (!t.isLocal && t.id !in done) {
+                graph.messages.post(s["offlineNothingPlayable"], isError = true)
+                return
+            }
+            scope.launch {
+                val sample = graph.library.sampleTracks(20, excludeId = t.id)
+                    .filter { it.isLocal || it.id in done }
+                graph.player.playTracks(listOf(t) + sample, 0)
+            }
+            return
+        }
+        graph.player.playSingle(t)
+    }
+
     /** Searches [query] and plays the results (home shortcuts such as "Top hits" or "Latin hits"). */
     fun playQuery(query: String) = scope.launch {
         graph.messages.post(s.f("loadingQuery", query))

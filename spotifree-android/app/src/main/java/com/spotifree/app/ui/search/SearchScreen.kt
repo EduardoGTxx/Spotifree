@@ -256,7 +256,7 @@ fun SearchScreen() {
                     if (ui.local.isNotEmpty()) {
                         item { SectionTitle(t("inYourLibrary")) }
                         items(ui.local) { tr ->
-                            TrackRow(tr, onClick = { actions.play(ui.local, ui.local.indexOf(tr)) }, isCurrent = player.current?.id == tr.id,
+                            TrackRow(tr, onClick = { actions.playFromSearch(tr) }, isCurrent = player.current?.id == tr.id,
                                 onMore = { actions.showMenu(tr, MenuContext()) })
                         }
                     }
@@ -338,7 +338,7 @@ private fun Results(ui: SearchUi, currentId: String?, onRetry: () -> Unit) {
             if (ui.filter == null) item { SectionTitle(t("songs")) }
             val list = if (ui.filter == null) r.songs.take(8) else r.songs
             items(list) { tr ->
-                TrackRow(tr, onClick = { actions.play(r.songs, r.songs.indexOf(tr)) }, isCurrent = currentId == tr.id,
+                TrackRow(tr, onClick = { actions.playFromSearch(tr) }, isCurrent = currentId == tr.id,
                     onMore = { actions.showMenu(tr, MenuContext()) })
             }
         }
@@ -368,7 +368,7 @@ private fun Results(ui: SearchUi, currentId: String?, onRetry: () -> Unit) {
         if (ui.local.isNotEmpty()) {
             item { SectionTitle(t("inYourLibrary")) }
             items(ui.local) { tr ->
-                TrackRow(tr, onClick = { actions.play(ui.local, ui.local.indexOf(tr)) }, isCurrent = currentId == tr.id,
+                TrackRow(tr, onClick = { actions.playFromSearch(tr) }, isCurrent = currentId == tr.id,
                     onMore = { actions.showMenu(tr, MenuContext()) })
             }
         }

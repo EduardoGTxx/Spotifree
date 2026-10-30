@@ -245,7 +245,8 @@ class PlayerConnection(private val context: Context, private val scope: Coroutin
             c.setMediaItems(listOf(MediaItems.toMediaItem(track)), 0, 0)
             c.prepare()
             c.play()
-            c.sendCustomCommand(SessionCommand(PlaybackCommands.START_RADIO, Bundle.EMPTY), Bundle.EMPTY)
+            val args = Bundle().apply { putString(PlaybackCommands.ARG_TRACK_ID, track.id) }
+            c.sendCustomCommand(SessionCommand(PlaybackCommands.START_RADIO, args), args)
         }
     }
 

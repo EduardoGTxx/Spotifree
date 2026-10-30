@@ -75,6 +75,15 @@ class LibraryRepository(
 
     suspend fun track(id: String): Track? = tracks.get(id)?.toTrack()
 
+    /** Returns a sample of tracks from the library / liked songs to seed a queue when offline or if radio is empty. */
+    suspend fun sampleTracks(limit: Int = 20, excludeId: String? = null): List<Track> {
+        val pool = runCatchingCancellable {
+            val l = likes.likedTracks().map { it.toTrack() }
+            if (l.isNotEmpty()) l else tracks.all().map { it.toTrack() }
+        }.getOrDefault(emptyList())
+        return pool.filter { it.id != excludeId && !isBlocked(it) }.shuffled().take(limit)
+    }
+
     suspend fun tracksByIds(ids: List<String>): List<Track> {
         val byId = HashMap<String, Track>()
         ids.distinct().chunked(900).forEach { chunk -> tracks.getMany(chunk).forEach { byId[it.id] = it.toTrack() } }
