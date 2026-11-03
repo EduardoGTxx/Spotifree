@@ -105,7 +105,12 @@ class DownloadRepository(
 
     suspend fun clearAll() = withContext(Dispatchers.IO) {
         work.cancelAllWorkByTag(TAG)
-        dao.done().forEach { remove(it.trackId) }
+        val done = dao.done()
+        done.forEach { d ->
+            d.filePath?.let { File(it).delete() }
+            d.coverPath?.let { File(it).delete() }
+        }
+        done.map { it.trackId }.chunked(900).forEach { dao.deleteMany(it) }
         downloadsDir.listFiles()?.forEach { it.delete() }
     }
 
@@ -122,16 +127,20 @@ class DownloadRepository(
     }
 
     /** Evicts the oldest automatically saved songs above the cache limit. */
-    suspend fun enforceCacheLimit() {
+    suspend fun enforceCacheLimit() = withContext(Dispatchers.IO) {
         val limit = settings.current.cacheSizeMb.toLong() * 1024 * 1024
-        if (limit <= 0) return
-        var total = dao.autoCachedBytes()
-        if (total <= limit) return
-        for (d in dao.autoCachedOldestFirst()) {
-            if (total <= limit) break
-            remove(d.trackId)
-            total -= d.sizeBytes
+        if (limit <= 0) return@withContext
+        val total = dao.autoCachedBytes()
+        if (total <= limit) return@withContext
+        val oldest = dao.autoCachedOldestFirst()
+        val victimIds = selectCacheVictims(oldest, total, limit).toHashSet()
+        for (d in oldest) {
+            if (d.trackId in victimIds) {
+                d.filePath?.let { File(it).delete() }
+                d.coverPath?.let { File(it).delete() }
+            }
         }
+        victimIds.toList().chunked(900).forEach { dao.deleteMany(it) }
     }
 
     /** Copies a downloaded song to Music/Spotifree so other players can use it. */
@@ -168,5 +177,17 @@ class DownloadRepository(
     companion object {
         const val TAG = "spotifree-download"
         fun workName(trackId: String) = "dl-$trackId"
+
+        internal fun selectCacheVictims(oldestFirst: List<DownloadEntity>, totalBytes: Long, limitBytes: Long): List<String> {
+            if (limitBytes <= 0 || totalBytes <= limitBytes) return emptyList()
+            var remaining = totalBytes
+            val victims = ArrayList<String>()
+            for (d in oldestFirst) {
+                if (remaining <= limitBytes) break
+                victims += d.trackId
+                remaining -= d.sizeBytes
+            }
+            return victims
+        }
     }
 }

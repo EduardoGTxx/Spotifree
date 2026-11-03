@@ -236,6 +236,9 @@ interface DownloadDao {
     @Query("DELETE FROM downloads WHERE trackId = :trackId")
     suspend fun delete(trackId: String)
 
+    @Query("DELETE FROM downloads WHERE trackId IN (:ids)")
+    suspend fun deleteMany(ids: List<String>)
+
     @Query("SELECT COALESCE(SUM(sizeBytes), 0) FROM downloads WHERE state = 2")
     fun observeTotalBytes(): Flow<Long>
 

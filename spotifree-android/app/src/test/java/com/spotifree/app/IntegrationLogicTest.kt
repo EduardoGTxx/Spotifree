@@ -332,4 +332,30 @@ class IntegrationLogicTest {
         val playable = com.spotifree.app.ui.workout.filterOfflinePlayableTracks(list, setOf("dl-1"))
         assertEquals(listOf("local-1", "dl-1"), playable.map { it.id })
     }
+
+    @Test
+    fun updateCheckerValidatesTrustedHttpsGithubUrls() {
+        assertTrue(com.spotifree.app.data.update.UpdateChecker.isTrustedApkUrl("https://github.com/EduardoGTxx/Spotifree/releases/download/v2.1.0/Spotifree.apk"))
+        assertTrue(com.spotifree.app.data.update.UpdateChecker.isTrustedApkUrl("https://objects.githubusercontent.com/github-production-release-asset/Spotifree.apk"))
+        assertFalse(com.spotifree.app.data.update.UpdateChecker.isTrustedApkUrl("http://github.com/EduardoGTxx/Spotifree/releases/download/v2.1.0/Spotifree.apk"))
+        assertFalse(com.spotifree.app.data.update.UpdateChecker.isTrustedApkUrl("https://evil.example.com/github.com/Spotifree.apk"))
+    }
+
+    @Test
+    fun rewindStoryIndexClampsWhenSwitchingToShorterYear() {
+        assertEquals(2, com.spotifree.app.ui.stats.clampStoryIndex(7, 3))
+        assertEquals(0, com.spotifree.app.ui.stats.clampStoryIndex(-1, 5))
+        assertEquals(0, com.spotifree.app.ui.stats.clampStoryIndex(3, 0))
+    }
+
+    @Test
+    fun downloadCacheEvictionSelectsOldestAutoCachedUntilUnderLimit() {
+        val entries = listOf(
+            com.spotifree.app.data.db.DownloadEntity(trackId = "t1", state = 2, sizeBytes = 400, isManual = false, lastAccessedAt = 10),
+            com.spotifree.app.data.db.DownloadEntity(trackId = "t2", state = 2, sizeBytes = 400, isManual = false, lastAccessedAt = 20),
+            com.spotifree.app.data.db.DownloadEntity(trackId = "t3", state = 2, sizeBytes = 400, isManual = false, lastAccessedAt = 30),
+        )
+        val victims = com.spotifree.app.data.download.DownloadRepository.selectCacheVictims(entries, totalBytes = 1200, limitBytes = 500)
+        assertEquals(listOf("t1", "t2"), victims)
+    }
 }
