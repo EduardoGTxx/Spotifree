@@ -271,4 +271,16 @@ class IntegrationLogicTest {
         assertFalse(com.spotifree.app.data.recognition.Recognizer.useContextMediaRecorder(30))
         assertTrue(com.spotifree.app.data.recognition.Recognizer.useContextMediaRecorder(31))
     }
+
+    @Test
+    fun bluetoothResumeReceiverOnlyResumesOnConnectedState() {
+        val a2dp = android.bluetooth.BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED
+        val headset = android.bluetooth.BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED
+        assertTrue(com.spotifree.app.playback.BluetoothResumeReceiver.shouldResume(a2dp, android.bluetooth.BluetoothProfile.STATE_CONNECTED))
+        assertTrue(com.spotifree.app.playback.BluetoothResumeReceiver.shouldResume(headset, android.bluetooth.BluetoothProfile.STATE_CONNECTED))
+        assertFalse(com.spotifree.app.playback.BluetoothResumeReceiver.shouldResume(a2dp, android.bluetooth.BluetoothProfile.STATE_DISCONNECTED))
+        assertFalse(com.spotifree.app.playback.BluetoothResumeReceiver.shouldResume(a2dp, android.bluetooth.BluetoothProfile.STATE_DISCONNECTING))
+        assertFalse(com.spotifree.app.playback.BluetoothResumeReceiver.shouldResume(a2dp, android.bluetooth.BluetoothProfile.STATE_CONNECTING))
+        assertFalse(com.spotifree.app.playback.BluetoothResumeReceiver.shouldResume("android.intent.action.VIEW", android.bluetooth.BluetoothProfile.STATE_CONNECTED))
+    }
 }
