@@ -89,6 +89,7 @@ class UpdateChecker(private val context: Context, private val http: OkHttpClient
 
     /** Downloads the APK (verifying SHA-256 when published) and hands it to the system installer. */
     suspend fun downloadAndInstall(update: AppUpdate, onProgress: (Float) -> Unit) = withContext(Dispatchers.IO) {
+        if (!isTrustedApkUrl(update.apkUrl)) throw SecurityException("untrusted_url")
         val file = File(context.cacheDir, "update.apk")
         http.newCall(Request.Builder().url(update.apkUrl).build()).execute().use { r ->
             if (!r.isSuccessful) throw IllegalStateException("HTTP ${r.code}")
@@ -118,16 +119,28 @@ class UpdateChecker(private val context: Context, private val http: OkHttpClient
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
         val sessionId = installer.createSession(params)
-        installer.openSession(sessionId).use { session ->
-            session.openWrite("spotifree.apk", 0, file.length()).use { out -> file.inputStream().use { it.copyTo(out) }; session.fsync(out) }
-            val intent = Intent(context, InstallResultReceiver::class.java)
-            val pi = PendingIntent.getBroadcast(context, sessionId, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
-            session.commit(pi.intentSender)
+        try {
+            installer.openSession(sessionId).use { session ->
+                session.openWrite("spotifree.apk", 0, file.length()).use { out -> file.inputStream().use { it.copyTo(out) }; session.fsync(out) }
+                val intent = Intent(context, InstallResultReceiver::class.java)
+                val pi = PendingIntent.getBroadcast(context, sessionId, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
+                session.commit(pi.intentSender)
+            }
+        } catch (t: Throwable) {
+            runCatching { installer.abandonSession(sessionId) }
+            throw t
         }
     }
 
     companion object {
         const val REPO = "EduardoGTxx/Spotifree"
+
+        internal fun isTrustedApkUrl(url: String): Boolean {
+            val parsed = okhttp3.HttpUrl.Companion.run { url.toHttpUrlOrNull() } ?: return false
+            if (!parsed.isHttps) return false
+            val host = parsed.host.lowercase()
+            return host == "github.com" || host.endsWith(".github.com") || host.endsWith(".githubusercontent.com")
+        }
 
         fun compare(a: String, b: String): Int {
             fun parts(v: String) = Regex("""^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$""").find(v.trim())?.groupValues
