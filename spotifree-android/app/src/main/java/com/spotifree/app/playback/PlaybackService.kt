@@ -74,6 +74,8 @@ class PlaybackService : MediaLibraryService() {
     // Radio autoplay
     private var radioJob: Job? = null
     private var radioSeedId: String? = null
+    private var radioWave: Int = 0
+    private var contextSeeds: MutableList<Track> = mutableListOf()
 
     // Sleep timer
     private var sleepMode = ""
@@ -217,6 +219,9 @@ class PlaybackService : MediaLibraryService() {
                     player.seekToNextMediaItem()
                     return
                 }
+                if (graph.artwork.needsCoverUpgrade(t)) {
+                    graph.scope.launch { graph.artwork.ensureCover(t) }
+                }
             }
             maybeQueueRadio()
             prefetchNext()
@@ -334,35 +339,76 @@ class PlaybackService : MediaLibraryService() {
     private fun maybeQueueRadio(force: Boolean = false, playAfter: Boolean = false, seedTrackId: String? = null) {
         val s = graph.settings.current
         if ((!force && !s.autoplayRadio) || s.offlineMode) return
-        if (player.repeatMode != Player.REPEAT_MODE_OFF || sessionPlayer.shuffleModeEnabled && !force) return
+        if (player.repeatMode != Player.REPEAT_MODE_OFF && !force) return
         val remaining = player.mediaItemCount - player.currentMediaItemIndex - 1
-        if (!force && remaining > 1) return
+        if (!force && remaining > 4) return
+
+        val queueTracks = (0 until player.mediaItemCount).map { MediaItems.toTrack(player.getMediaItemAt(it)) }
         val seed = seedTrackId?.let { id ->
-            (0 until player.mediaItemCount)
-                .map { MediaItems.toTrack(player.getMediaItemAt(it)) }
-                .firstOrNull { it.id == id }
+            queueTracks.firstOrNull { it.id == id }
         } ?: run {
-            val seedItem = player.currentMediaItem ?: (if (player.mediaItemCount > 0) player.getMediaItemAt(player.mediaItemCount - 1) else null) ?: return
+            val tailItem = if (!force && player.mediaItemCount > 0) player.getMediaItemAt(player.mediaItemCount - 1) else null
+            val seedItem = player.currentMediaItem ?: tailItem ?: return
             MediaItems.toTrack(seedItem)
         }
-        if (radioJob?.isActive == true || radioSeedId == seed.id) return
-        radioSeedId = seed.id
+
+        val seedKey = "${seed.id}#w$radioWave"
+        if (radioJob?.isActive == true || (!force && radioSeedId == seedKey)) return
         radioJob = scope.launch {
             val resolvedSeed = seed.youtubeId?.let { seed } ?: graph.library.track(seed.id)?.let { graph.library.resolveOnYouTube(it) }
-            val vid = resolvedSeed?.youtubeId
             val existing = HashSet<String>()
             for (i in 0 until player.mediaItemCount) existing += player.getMediaItemAt(i).mediaId
-            var radio = if (vid != null) {
-                withContext(Dispatchers.IO) { runCatchingCancellable { graph.music.radio(vid) }.getOrDefault(emptyList()) }
-                    .filter { it.id !in existing && !graph.library.isBlocked(it) }
+
+            val isMultiContext = contextSeeds.size > 1
+            val waveSeeds = buildList {
+                if (resolvedSeed != null) add(resolvedSeed)
+                if (isMultiContext || radioWave >= 1) {
+                    addAll(contextSeeds.filter { it.youtubeId != null && it.id != resolvedSeed?.id })
+                    val tailTrack = queueTracks.lastOrNull()?.takeIf { it.youtubeId != null && it.id != resolvedSeed?.id }
+                    if (tailTrack != null) add(tailTrack)
+                }
+            }
+
+            val bridgePool = graph.library.sampleTracks(8, excludeId = seed.id)
+                .filter { it.id !in existing && !graph.library.isBlocked(it) }
+
+            var radio = if (waveSeeds.isNotEmpty()) {
+                withContext(Dispatchers.IO) {
+                    runCatchingCancellable {
+                        graph.music.multiSeedRadio(
+                            seeds = waveSeeds,
+                            excludeIds = existing,
+                            bridgeTracks = bridgePool,
+                            wave = radioWave,
+                            limit = 20,
+                        )
+                    }.getOrDefault(emptyList())
+                }.filter { it.id !in existing && !graph.library.isBlocked(it) }
                     .take(20)
             } else emptyList()
+
+            if (radio.isEmpty() && resolvedSeed?.youtubeId != null) {
+                radio = withContext(Dispatchers.IO) {
+                    runCatchingCancellable {
+                        graph.music.radio(resolvedSeed.youtubeId!!, limit = 25, seedTrack = resolvedSeed)
+                    }.getOrDefault(emptyList())
+                }.filter { it.id !in existing && !graph.library.isBlocked(it) }
+                    .take(20)
+            }
+
             if (radio.isEmpty()) {
-                val pool = graph.library.sampleTracks(20, excludeId = seed.id)
-                    .filter { it.id !in existing }
-                radio = pool
+                radio = bridgePool
             }
             if (radio.isEmpty()) return@launch
+
+            radioSeedId = seedKey
+            radioWave++
+            if (contextSeeds.size < 4) {
+                radio.firstOrNull { it.youtubeId != null }?.let { nextAnchor ->
+                    if (contextSeeds.none { it.id == nextAnchor.id }) contextSeeds += nextAnchor
+                }
+            }
+
             graph.library.saveAll(radio)
             val wasEnded = player.playbackState == Player.STATE_ENDED
             player.addMediaItems(radio.map { MediaItems.toMediaItem(it) })
@@ -383,6 +429,7 @@ class PlaybackService : MediaLibraryService() {
         graph.scope.launch(Dispatchers.IO) {
             runCatchingCancellable {
                 val t = track.youtubeId?.let { track } ?: graph.library.track(track.id)?.let { graph.library.resolveOnYouTube(it) }
+                t?.let { graph.artwork.ensureCover(it) }
                 t?.youtubeId?.let { graph.streams.resolve(it, graph.settings.current.audioQuality) }
             }
         }
@@ -569,8 +616,11 @@ class PlaybackService : MediaLibraryService() {
                 }
                 PlaybackCommands.START_RADIO -> {
                     val trackId = args.getString(PlaybackCommands.ARG_TRACK_ID)
-                    radioSeedId = null
-                    maybeQueueRadio(force = true, seedTrackId = trackId)
+                    if (radioJob?.isActive != true) {
+                        radioSeedId = null
+                        radioWave = 0
+                        maybeQueueRadio(force = true, seedTrackId = trackId)
+                    }
                 }
                 PlaybackCommands.DUCK -> setDucked(args.getBoolean(PlaybackCommands.ARG_ON))
                 PlaybackCommands.APPLY_SETTINGS -> applySettings(graph.settings.current)
@@ -595,17 +645,25 @@ class PlaybackService : MediaLibraryService() {
             startIndex: Int,
             startPositionMs: Long,
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = scope.listenableFuture {
+            radioJob?.cancel()
+            radioSeedId = null
+            radioWave = 0
             // Android Auto plays a song "inside" a playlist: queue the whole list from that song
             browseTree.expandContext(mediaItems)?.let { (tracks, index) ->
                 graph.library.saveAll(tracks)
+                contextSeeds = com.spotifree.app.data.remote.MusicRepository.pickDiverseSeeds(tracks, maxSeeds = 4).toMutableList()
                 return@listenableFuture MediaSession.MediaItemsWithStartPosition(tracks.map { MediaItems.toMediaItem(it) }, index, 0)
             }
             val tracks = browseTree.expandToTracks(mediaItems)
             graph.library.saveAll(tracks)
-            radioSeedId = null
+            val safeStart = if (startIndex == C.INDEX_UNSET) 0 else startIndex.coerceIn(0, (tracks.size - 1).coerceAtLeast(0))
+            val orderedForSeeds = if (tracks.isNotEmpty() && safeStart in tracks.indices) {
+                listOf(tracks[safeStart]) + tracks.filterIndexed { idx, _ -> idx != safeStart }
+            } else tracks
+            contextSeeds = com.spotifree.app.data.remote.MusicRepository.pickDiverseSeeds(orderedForSeeds, maxSeeds = 4).toMutableList()
             MediaSession.MediaItemsWithStartPosition(
                 tracks.map { MediaItems.toMediaItem(it) },
-                if (startIndex == C.INDEX_UNSET) 0 else startIndex.coerceIn(0, (tracks.size - 1).coerceAtLeast(0)),
+                safeStart,
                 if (startPositionMs == C.TIME_UNSET) 0 else startPositionMs,
             )
         }

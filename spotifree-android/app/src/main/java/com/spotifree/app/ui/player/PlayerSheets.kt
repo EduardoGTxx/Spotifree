@@ -88,6 +88,7 @@ import com.spotifree.app.ui.MenuContext
 import com.spotifree.app.ui.common.Artwork
 import com.spotifree.app.ui.common.MenuItem
 import com.spotifree.app.ui.common.SectionTitle
+import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
 import kotlinx.coroutines.delay
@@ -121,7 +122,7 @@ fun QueueSheet(onDismiss: () -> Unit) {
             state.current?.let { cur ->
                 Text(t("nowPlaying"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp))
                 Row(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Artwork(cur.artworkUrl, size = 48.dp)
+                    Artwork(rememberTrackArtwork(cur), size = 48.dp)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(cur.title, color = c.accent, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
@@ -149,7 +150,7 @@ fun QueueSheet(onDismiss: () -> Unit) {
                             .padding(start = 20.dp, end = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Artwork(track.artworkUrl, size = 44.dp)
+                        Artwork(rememberTrackArtwork(track), size = 44.dp)
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis)

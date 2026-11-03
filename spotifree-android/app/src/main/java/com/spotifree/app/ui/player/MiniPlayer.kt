@@ -46,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.spotifree.app.ui.LocalActions
 import com.spotifree.app.ui.LocalGraph
 import com.spotifree.app.ui.common.Artwork
+import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
 
 @Composable
@@ -57,7 +58,8 @@ fun MiniPlayer(onOpen: () -> Unit) {
     val liked by graph.library.likedIds.collectAsStateWithLifecycle()
     val track = state.current ?: return
     val c = LocalSpotifreeColors.current
-    val bg by rememberCoverColor(track.artworkUrl, c.elevated)
+    val artworkUrl = rememberTrackArtwork(track)
+    val bg by rememberCoverColor(artworkUrl, c.elevated)
     val drag = remember { mutableFloatStateOf(0f) }
     var devices by remember { mutableStateOf(false) }
     Box(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
@@ -79,7 +81,7 @@ fun MiniPlayer(onOpen: () -> Unit) {
                 },
         ) {
             Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Artwork(track.artworkUrl, size = 42.dp)
+                Artwork(artworkUrl, size = 42.dp)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium,

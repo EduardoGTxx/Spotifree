@@ -158,10 +158,12 @@ fun PlaylistScreen(id: String, onBack: () -> Unit) {
     var reloadSuggestions by remember(id) { mutableStateOf(0) }
     val hasSeed = all.any { it.youtubeId != null }
     LaunchedEffect(id, hasSeed, reloadSuggestions) {
-        val seedId = all.filter { it.youtubeId != null }.randomOrNull()?.youtubeId
-        if ((isUser || isLiked) && seedId != null && !graph.settings.current.offlineMode) {
+        val seedCandidates = all.filter { it.youtubeId != null }.shuffled()
+        if ((isUser || isLiked) && seedCandidates.isNotEmpty() && !graph.settings.current.offlineMode) {
             val inList = all.map { it.id }.toSet()
-            suggestions = runCatchingCancellable { graph.music.radio(seedId, 30) }.getOrDefault(emptyList())
+            suggestions = runCatchingCancellable {
+                graph.music.multiSeedRadio(seeds = seedCandidates, excludeIds = inList, limit = 12)
+            }.getOrDefault(emptyList())
                 .filter { it.id !in inList && !graph.library.isBlocked(it) }.take(10)
         }
     }

@@ -39,7 +39,7 @@ class AppGraph(val context: Context) {
 
     val db: AppDatabase = AppDatabase.create(context)
     val settings = SettingsRepository(context, scope)
-    val music = MusicRepository()
+    val music = MusicRepository(http)
     val streams = StreamResolver(http, db.cache())
     val library = LibraryRepository(db, music, scope)
     val downloads = DownloadRepository(context, db, library, streams, settings, http, scope)
@@ -52,7 +52,7 @@ class AppGraph(val context: Context) {
     val recognizer = com.spotifree.app.data.recognition.Recognizer(context, http)
     val updates = com.spotifree.app.data.update.UpdateChecker(context, http)
     val localMusic = com.spotifree.app.data.local.LocalMusicScanner(context, db)
-    val artwork = com.spotifree.app.data.artwork.ArtworkResolver(http, db.tracks()) { t -> library.resolveOnYouTube(t)?.artworkUrl }
+    val artwork = com.spotifree.app.data.artwork.ArtworkResolver(http, db.tracks(), db.history()) { t -> library.resolveOnYouTube(t)?.artworkUrl }
     val backups = com.spotifree.app.data.importer.BackupManager(context, db, settings)
 
     val trackResolver = TrackResolver(context, db, library, streams, settings)
@@ -61,6 +61,9 @@ class AppGraph(val context: Context) {
     init {
         com.spotifree.app.playback.MediaItems.localCover = { id ->
             downloads.all.value[id]?.coverPath?.takeIf { it.isNotBlank() }
+        }
+        com.spotifree.app.playback.MediaItems.resolvedCover = { id ->
+            artwork.resolvedCovers.value[id]
         }
         val locale = Locale.getDefault()
         val country = locale.country.ifBlank { "US" }

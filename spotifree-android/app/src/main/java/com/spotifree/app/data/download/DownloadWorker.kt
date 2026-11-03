@@ -10,6 +10,7 @@ import com.spotifree.app.AppGraph
 import com.spotifree.app.data.db.DownloadEntity
 import com.spotifree.app.data.db.DownloadState
 import com.spotifree.app.data.remote.StreamUnavailableException
+import com.spotifree.app.data.remote.YouTubeIds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -62,7 +63,16 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 isManual = row.isManual,
             )
             dao.upsert(done)
-            track.artworkUrl?.let { url -> downloadCover(repo, url, File(repo.coversDir, "$base.jpg")) }?.let { cover ->
+            val coverUrl = if (YouTubeIds.isLowResVideoThumbnail(track.coverUrl)) {
+                val upgraded = runCatchingCancellable { graph.artwork.find(track.artist, track.title) }.getOrNull()
+                if (upgraded != null) {
+                    graph.db.tracks().setCover(trackId, upgraded)
+                    upgraded
+                } else track.artworkUrl
+            } else {
+                track.artworkUrl
+            }
+            coverUrl?.let { url -> downloadCover(repo, url, File(repo.coversDir, "$base.jpg")) }?.let { cover ->
                 dao.upsert(done.copy(coverPath = cover.absolutePath, sizeBytes = done.sizeBytes + cover.length()))
             }
             if (!row.isManual) repo.enforceCacheLimit()

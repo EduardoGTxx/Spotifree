@@ -1,42 +1,42 @@
 package com.spotifree.app.ui.player
 
+import android.content.Intent
 import android.os.SystemClock
-import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.DragInteraction
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.TextUnit
-import com.spotifree.app.data.lyrics.LyricsSync
-import com.spotifree.app.data.model.LyricWord
-import kotlinx.coroutines.delay
-
-import com.spotifree.app.util.runCatchingCancellable
-
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,42 +44,82 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.spotifree.app.data.lyrics.LrcParser
 import com.spotifree.app.data.lyrics.LyricsResult
+import com.spotifree.app.data.lyrics.LyricsSync
 import com.spotifree.app.data.lyrics.Romanizer
 import com.spotifree.app.data.model.LyricLine
+import com.spotifree.app.data.model.LyricWord
 import com.spotifree.app.data.model.Track
 import com.spotifree.app.ui.LocalGraph
+import com.spotifree.app.ui.common.Artwork
 import com.spotifree.app.ui.common.LoadingBox
+import com.spotifree.app.ui.common.SeekBar
+import com.spotifree.app.ui.common.formatMs
+import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.i18n.LocalStrings
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.util.runCatchingCancellable
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
+
+private val PurpleTop = Color(0xFF6B3FA0)
+private val PurpleMid = Color(0xFF3B1E58)
+private val PurpleDeep = Color(0xFF1A0D2A)
+private val PurpleBottom = Color(0xFF0B0614)
 
 @Composable
-fun LyricsView(track: Track, modifier: Modifier = Modifier) {
+fun LyricsView(
+    track: Track,
+    modifier: Modifier = Modifier,
+    onMinimize: (() -> Unit)? = null,
+) {
     val graph = LocalGraph.current
+    val context = LocalContext.current
     val strings = LocalStrings.current
     val settings by graph.settings.settings.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val c = LocalSpotifreeColors.current
+    val artworkUrl = rememberTrackArtwork(track)
+    val coverColor by rememberCoverColor(artworkUrl, PurpleTop)
+    val topTint by animateColorAsState(lerp(PurpleTop, coverColor, 0.28f), tween(600), label = "lyrics_bg")
+
     var result by remember(track.id) { mutableStateOf<LyricsResult?>(null) }
     var reload by remember { mutableIntStateOf(0) }
     var translation by remember(track.id) { mutableStateOf<List<String>?>(null) }
@@ -95,74 +135,386 @@ fun LyricsView(track: Track, modifier: Modifier = Modifier) {
 
     val res = result
     val lyrics = res?.lyrics
-    Column(modifier) {
-        if (lyrics != null) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                FilterChip(
-                    selected = showTranslation,
-                    onClick = {
-                        if (showTranslation) showTranslation = false
-                        else if (translation != null) showTranslation = true
-                        else {
-                            translating = true
-                            scope.launch {
-                                translation = runCatchingCancellable { graph.lyrics.translate(lyrics.lines, strings.lang).first }.getOrNull()
-                                translating = false
-                                showTranslation = translation != null
-                                if (translation == null) graph.messages.post(strings["translationFailed"], isError = true)
-                            }
-                        }
-                    },
-                    label = { Text(if (translating) t("translating") else t("translate")) },
-                    leadingIcon = { Icon(Icons.Default.Translate, null) },
-                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = c.accent.copy(alpha = 0.3f)),
-                )
-                FilterChip(
-                    selected = settings.lyricsRomanization,
-                    onClick = { scope.launch { graph.settings.update { it.copy(lyricsRomanization = !it.lyricsRomanization) } } },
-                    label = { Text("Aa→ア") },
-                    modifier = Modifier.padding(start = 6.dp),
-                )
-                IconButton(onClick = {
-                    val order = listOf("sm", "md", "lg", "xl")
-                    val next = order[(order.indexOf(settings.lyricsFontSize) + 1) % order.size]
-                    scope.launch { graph.settings.update { it.copy(lyricsFontSize = next) } }
-                }) { Icon(Icons.Default.FormatSize, null) }
-            }
-            if (lyrics.source != null) {
-                Text(t("lyricsSource", lyrics.source), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
-            }
+    val position = rememberSmoothPosition()
+    val activeIndex by remember(lyrics?.lines, lyrics?.isSynced) {
+        derivedStateOf {
+            val l = lyrics ?: return@derivedStateOf -1
+            if (l.isSynced) LrcParser.activeIndex(l.lines, position.value / 1000.0) else -1
         }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            when {
-                res == null -> LoadingBox(Modifier.fillMaxSize())
-                lyrics == null -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(if (res.networkError) t("lyricsNetworkError") else t("noLyrics"), color = Color.White.copy(alpha = 0.7f))
-                    TextButton(onClick = { reload++ }) {
-                        Icon(Icons.Default.Refresh, null)
-                        Text(t("retry"))
+    }
+    val hasNonLatin = remember(lyrics?.lines) {
+        lyrics?.lines?.any { line -> line.text.any { ch -> ch.code > 0x024F } } == true
+    }
+
+    Box(
+        modifier
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        topTint,
+                        PurpleMid,
+                        PurpleDeep,
+                        PurpleBottom,
+                    ),
+                ),
+            )
+            .drawWithContent {
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFF8E4EC6).copy(alpha = 0.34f),
+                            Color.Transparent,
+                        ),
+                        center = Offset(size.width * 0.45f, size.height * 0.36f),
+                        radius = size.minDimension * 0.85f,
+                    ),
+                )
+                drawContent()
+            },
+    ) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding(),
+        ) {
+            // Top header bar (matching the purple fullscreen design)
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (onMinimize != null) {
+                    Box(
+                        Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.14f))
+                            .clickable(onClick = onMinimize),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Default.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                }
+
+                Artwork(
+                    url = artworkUrl,
+                    size = 38.dp,
+                    shape = RoundedCornerShape(8.dp),
+                )
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .padding(horizontal = 10.dp),
+                ) {
+                    Text(
+                        text = track.title,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = track.artist,
+                        color = Color.White.copy(alpha = 0.72f),
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                if (lyrics != null) {
+                    // Font size ("Aa") pill button
+                    Box(
+                        Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.14f))
+                            .clickable {
+                                val order = listOf("sm", "md", "lg", "xl")
+                                val next = order[(order.indexOf(settings.lyricsFontSize) + 1) % order.size]
+                                scope.launch { graph.settings.update { it.copy(lyricsFontSize = next) } }
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "Aa",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                        )
+                    }
+
+                    if (hasNonLatin) {
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            Modifier
+                                .height(36.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    if (settings.lyricsRomanization) Color.White.copy(alpha = 0.28f)
+                                    else Color.White.copy(alpha = 0.14f),
+                                )
+                                .clickable {
+                                    scope.launch { graph.settings.update { it.copy(lyricsRomanization = !it.lyricsRomanization) } }
+                                }
+                                .padding(horizontal = 10.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = "Aa→ア",
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp,
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.width(8.dp))
+
+                    // Translate pill button
+                    Row(
+                        Modifier
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(
+                                if (showTranslation) Color.White.copy(alpha = 0.28f)
+                                else Color.White.copy(alpha = 0.14f),
+                            )
+                            .clickable {
+                                if (showTranslation) showTranslation = false
+                                else if (translation != null) showTranslation = true
+                                else {
+                                    translating = true
+                                    scope.launch {
+                                        translation = runCatchingCancellable { graph.lyrics.translate(lyrics.lines, strings.lang).first }.getOrNull()
+                                        translating = false
+                                        showTranslation = translation != null
+                                        if (translation == null) graph.messages.post(strings["translationFailed"], isError = true)
+                                    }
+                                }
+                            }
+                            .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Default.Translate,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = if (translating) t("translating") else t("translate"),
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                        )
+                    }
+
+                    Spacer(Modifier.width(8.dp))
+
+                    // Share circular button
+                    Box(
+                        Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.14f))
+                            .clickable {
+                                val activeLine = lyrics.lines.getOrNull(activeIndex)?.text?.takeIf { it.isNotBlank() }
+                                    ?: lyrics.lines.firstOrNull { !it.isInstrumental && it.text.isNotBlank() }?.text.orEmpty()
+                                val shareText = if (activeLine.isNotBlank()) {
+                                    "\"$activeLine\"\n— ${track.title} · ${track.artist}"
+                                } else {
+                                    "${track.title} · ${track.artist}"
+                                }
+                                val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                }
+                                runCatchingCancellable {
+                                    context.startActivity(Intent.createChooser(sendIntent, track.title))
+                                }
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(17.dp),
+                        )
                     }
                 }
-                else -> LyricsLines(lyrics.lines, lyrics.isSynced, if (showTranslation) translation else null, settings.lyricsRomanization,
-                    settings.lyricsKaraoke, settings.lyricsFontSize)
+            }
+
+            // Center lyrics area
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            ) {
+                when {
+                    res == null -> LoadingBox(Modifier.fillMaxSize())
+                    lyrics == null -> Column(
+                        Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            if (res.networkError) t("lyricsNetworkError") else t("noLyrics"),
+                            color = Color.White.copy(alpha = 0.7f),
+                        )
+                        TextButton(onClick = { reload++ }) {
+                            Icon(Icons.Default.Refresh, null)
+                            Text(t("retry"))
+                        }
+                    }
+                    else -> LyricsLines(
+                        lines = lyrics.lines,
+                        synced = lyrics.isSynced,
+                        translation = if (showTranslation) translation else null,
+                        romanize = settings.lyricsRomanization,
+                        karaoke = settings.lyricsKaraoke,
+                        fontSize = settings.lyricsFontSize,
+                        position = position,
+                        active = activeIndex,
+                    )
+                }
+            }
+
+            // Bottom transport controls (SeekBar + Previous, Play/Pause, Next)
+            LyricsTransportBar(
+                accentColor = c.accent,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 10.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun LyricsTransportBar(
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val graph = LocalGraph.current
+    val state by graph.player.state.collectAsStateWithLifecycle()
+    val position by graph.player.position.collectAsStateWithLifecycle()
+    var seeking by remember { mutableStateOf<Float?>(null) }
+    val duration = state.durationMs.coerceAtLeast(1)
+    val fraction = seeking ?: (position.toFloat() / duration).coerceIn(0f, 1f)
+
+    Column(modifier) {
+        SeekBar(
+            fraction = fraction,
+            onPreview = { seeking = it },
+            onSeek = {
+                graph.player.seekTo((it * duration).toLong())
+                seeking = null
+            },
+        )
+        Row(Modifier.fillMaxWidth().padding(top = 2.dp)) {
+            Text(
+                formatMs(seeking?.let { (it * duration).toLong() } ?: position),
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.65f),
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                formatMs(state.durationMs),
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.65f),
+            )
+        }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp, bottom = 4.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(
+                onClick = { graph.player.previous() },
+                modifier = Modifier.size(52.dp),
+            ) {
+                Icon(
+                    Icons.Default.SkipPrevious,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(36.dp),
+                )
+            }
+            Spacer(Modifier.width(24.dp))
+            Box(
+                Modifier
+                    .size(60.dp)
+                    .shadow(10.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(Color.White),
+                contentAlignment = Alignment.Center,
+            ) {
+                IconButton(
+                    onClick = { graph.player.togglePlay() },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    if (state.isBuffering) {
+                        CircularProgressIndicator(
+                            Modifier.size(26.dp),
+                            color = Color.Black,
+                            strokeWidth = 3.dp,
+                        )
+                    } else {
+                        Icon(
+                            if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = Color.Black,
+                            modifier = Modifier.size(34.dp),
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.width(24.dp))
+            IconButton(
+                onClick = { graph.player.next() },
+                enabled = state.hasNext || state.queue.isNotEmpty(),
+                modifier = Modifier.size(52.dp),
+            ) {
+                Icon(
+                    Icons.Default.SkipNext,
+                    contentDescription = null,
+                    tint = if (state.hasNext || state.queue.isNotEmpty()) Color.White else Color.White.copy(alpha = 0.4f),
+                    modifier = Modifier.size(36.dp),
+                )
             }
         }
     }
 }
 
 @Composable
-private fun LyricsLines(lines: List<LyricLine>, synced: Boolean, translation: List<String>?, romanize: Boolean, karaoke: Boolean, fontSize: String) {
+private fun LyricsLines(
+    lines: List<LyricLine>,
+    synced: Boolean,
+    translation: List<String>?,
+    romanize: Boolean,
+    karaoke: Boolean,
+    fontSize: String,
+    position: State<Long>,
+    active: Int,
+) {
     val graph = LocalGraph.current
-    val c = LocalSpotifreeColors.current
-    // Read the clock inside derivedStateOf: the active line changes a few times per minute, so the
-    // list only recomposes then (the per-frame value is read by the karaoke line alone).
-    val position = rememberSmoothPosition()
-    val active by remember(lines, synced) {
-        derivedStateOf { if (synced) LrcParser.activeIndex(lines, position.value / 1000.0) else -1 }
-    }
     val listState = rememberLazyListState()
     val size = when (fontSize) {
-        "sm" -> 18.sp
+        "sm" -> 19.sp
         "lg" -> 26.sp
         "xl" -> 30.sp
         else -> 22.sp
@@ -187,44 +539,110 @@ private fun LyricsLines(lines: List<LyricLine>, synced: Boolean, translation: Li
         delay(LyricsSync.holdRemaining(SystemClock.elapsedRealtime(), lastUserScrollAt))
         if (!LyricsSync.mayAutoScroll(SystemClock.elapsedRealtime(), dragging, lastUserScrollAt)) return@LaunchedEffect
         val viewport = listState.layoutInfo.viewportSize.height
-        listState.animateScrollToItem(active, -(viewport / 3))
+        listState.animateScrollToItem(active, -(viewport * 2 / 5))
     }
     val activeVisible by remember { derivedStateOf { listState.layoutInfo.visibleItemsInfo.any { it.index == active } } }
 
     val romanized = remember(lines, romanize) { if (romanize) lines.map { Romanizer.romanize(it.text) } else null }
     Box(Modifier.fillMaxSize()) {
-        LazyColumn(state = listState, contentPadding = PaddingValues(vertical = 48.dp), modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 72.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                .drawWithContent {
+                    drawContent()
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            0f to Color.Transparent,
+                            0.09f to Color.Black,
+                            0.88f to Color.Black,
+                            1f to Color.Transparent,
+                        ),
+                        blendMode = BlendMode.DstIn,
+                    )
+                },
+        ) {
             itemsIndexed(lines) { i, line ->
                 val isActive = i == active
-                val isPast = synced && i < active
+                val dist = if (synced && active >= 0) abs(i - active) else 0
+                val targetAlpha = when {
+                    !synced -> 0.92f
+                    isActive -> 1f
+                    dist == 1 -> 0.62f
+                    dist == 2 -> 0.48f
+                    dist == 3 -> 0.36f
+                    dist == 4 -> 0.26f
+                    else -> 0.18f
+                }
+                val blurRadius = when {
+                    !synced || dist <= 1 -> 0.dp
+                    dist == 2 -> 0.8.dp
+                    dist == 3 -> 2.2.dp
+                    dist == 4 -> 3.8.dp
+                    else -> 5.2.dp
+                }
                 val color by animateColorAsState(
-                    when {
-                        !synced -> Color.White
-                        isActive -> Color.White
-                        isPast -> Color.White.copy(alpha = 0.55f)
-                        else -> Color.White.copy(alpha = 0.35f)
-                    }, label = "line",
+                    Color.White.copy(alpha = targetAlpha),
+                    animationSpec = tween(250),
+                    label = "line_color",
                 )
+                val lineFontSize = if (isActive && synced) size * 1.12f else size
+                val nextTimeSec = lines.getOrNull(i + 1)?.timeSec ?: (line.timeSec + 4.0)
+
                 Column(
                     Modifier
                         .fillMaxWidth()
+                        .let { mod -> if (blurRadius > 0.dp) mod.blur(blurRadius) else mod }
                         .clickable(enabled = synced) {
                             lastUserScrollAt = 0L
                             graph.player.seekTo((line.timeSec * 1000).toLong())
                         }
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 10.dp),
                 ) {
-                    val words = line.words
-                    if (isActive && karaoke && !words.isNullOrEmpty()) {
-                        KaraokeLine(words, position, size)
+                    if (isActive && synced && karaoke && !line.isInstrumental) {
+                        val words = line.words?.takeIf { it.isNotEmpty() }
+                            ?: remember(line.text, line.timeSec, nextTimeSec) {
+                                interpolateWords(line.text, line.timeSec, nextTimeSec)
+                            }
+                        KaraokeLine(words, position, lineFontSize)
                     } else {
-                        Text(if (line.isInstrumental) LrcParser.INSTRUMENTAL else line.text, color = color, fontSize = size, fontWeight = FontWeight.Bold, lineHeight = size * 1.25f)
+                        Text(
+                            text = if (line.isInstrumental) LrcParser.INSTRUMENTAL else line.text,
+                            color = color,
+                            fontSize = lineFontSize,
+                            fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Bold,
+                            lineHeight = lineFontSize * 1.28f,
+                            style = if (isActive) {
+                                TextStyle(
+                                    shadow = Shadow(
+                                        color = Color.White.copy(alpha = 0.35f),
+                                        offset = Offset.Zero,
+                                        blurRadius = 18f,
+                                    ),
+                                )
+                            } else {
+                                TextStyle.Default
+                            },
+                        )
                     }
                     romanized?.getOrNull(i)?.takeIf { it.isNotBlank() && it != line.text }?.let {
-                        Text(it, color = color.copy(alpha = color.alpha * 0.8f), fontSize = size * 0.65f)
+                        Text(
+                            it,
+                            color = color.copy(alpha = color.alpha * 0.8f),
+                            fontSize = size * 0.65f,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
                     }
                     translation?.getOrNull(i)?.takeIf { it.isNotBlank() && it != line.text }?.let {
-                        Text(it, color = c.accent.copy(alpha = if (isActive || !synced) 1f else 0.6f), fontSize = size * 0.65f, fontWeight = FontWeight.Medium)
+                        Text(
+                            it,
+                            color = Color(0xFFE0B0FF).copy(alpha = if (isActive || !synced) 0.95f else targetAlpha * 0.85f),
+                            fontSize = size * 0.68f,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
                     }
                 }
             }
@@ -232,8 +650,13 @@ private fun LyricsLines(lines: List<LyricLine>, synced: Boolean, translation: Li
         // Back to the line being sung after scrolling away from it
         if (synced && active >= 0 && lastUserScrollAt > 0L && !activeVisible && !dragging) {
             Row(
-                Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp).clip(CircleShape).background(Color.White)
-                    .clickable { lastUserScrollAt = 0L }.padding(horizontal = 16.dp, vertical = 9.dp),
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 12.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .clickable { lastUserScrollAt = 0L }
+                    .padding(horizontal = 16.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Default.MyLocation, null, tint = Color.Black, modifier = Modifier.size(16.dp))
@@ -241,6 +664,26 @@ private fun LyricsLines(lines: List<LyricLine>, synced: Boolean, translation: Li
                 Text(t("lyricsBackToLine"), color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
         }
+    }
+}
+
+/**
+ * Generates smooth word-by-word timestamps across [startSec, endSec] weighted by word length
+ * when the LRC source only provides line-level timestamps.
+ */
+internal fun interpolateWords(text: String, startSec: Double, endSec: Double): List<LyricWord> {
+    val tokens = Regex("""\S+\s*""").findAll(text).map { it.value }.toList()
+    if (tokens.isEmpty()) return emptyList()
+    val rawSpan = (endSec - startSec).coerceIn(1.2, 8.0)
+    // Singing typically occupies the first ~85% of the interval before the next line starts
+    val singSpan = (rawSpan * 0.85).coerceAtLeast(0.8)
+    val weights = tokens.map { it.trim().length.coerceAtLeast(2).toDouble() }
+    val totalWeight = weights.sum().coerceAtLeast(1.0)
+    var accWeight = 0.0
+    return tokens.mapIndexed { idx, token ->
+        val wordStart = startSec + singSpan * (accWeight / totalWeight)
+        accWeight += weights[idx]
+        LyricWord(timeSec = wordStart, text = token)
     }
 }
 
@@ -252,9 +695,24 @@ private fun KaraokeLine(words: List<LyricWord>, position: State<Long>, size: Tex
         buildAnnotatedString {
             words.forEach { w ->
                 val sung = w.timeSec <= timeSec
-                withStyle(SpanStyle(color = if (sung) Color.White else Color.White.copy(alpha = 0.4f))) { append(w.text) }
+                withStyle(
+                    SpanStyle(
+                        color = if (sung) Color.White else Color.White.copy(alpha = 0.42f),
+                        shadow = if (sung) {
+                            Shadow(
+                                color = Color.White.copy(alpha = 0.38f),
+                                offset = Offset.Zero,
+                                blurRadius = 18f,
+                            )
+                        } else null,
+                    ),
+                ) {
+                    append(w.text)
+                }
             }
         },
-        fontSize = size, fontWeight = FontWeight.Bold, lineHeight = size * 1.25f,
+        fontSize = size,
+        fontWeight = FontWeight.ExtraBold,
+        lineHeight = size * 1.28f,
     )
 }

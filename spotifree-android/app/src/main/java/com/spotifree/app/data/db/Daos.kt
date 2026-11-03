@@ -292,6 +292,9 @@ interface HistoryDao {
 
     @Query("SELECT COUNT(*) FROM history WHERE source = :source")
     suspend fun countSource(source: String): Int
+
+    @Query("UPDATE history SET coverUrl = :coverUrl WHERE trackId = :trackId")
+    suspend fun setCover(trackId: String, coverUrl: String?)
 }
 
 @Dao

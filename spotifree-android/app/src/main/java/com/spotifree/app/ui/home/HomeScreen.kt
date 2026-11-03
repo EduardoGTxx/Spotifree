@@ -88,6 +88,7 @@ import com.spotifree.app.ui.common.SectionTitle
 import com.spotifree.app.ui.common.Shelf
 import com.spotifree.app.ui.common.ShelfCard
 import com.spotifree.app.ui.common.TrackRow
+import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
 import kotlinx.coroutines.Job
@@ -130,12 +131,15 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
         _feed.value = _feed.value.copy(loading = true)
         val recent = runCatchingCancellable { graph.library.observeRecent(15).first() }.getOrDefault(emptyList())
         val liked = runCatchingCancellable { graph.library.observeLiked().first().take(50) }.getOrDefault(emptyList())
-        val seeds = (recent + liked).filter { it.youtubeId != null }
-        val seed = seeds.randomOrNull()
+        val seeds = (recent + liked).filter { it.youtubeId != null }.shuffled()
+        val seed = seeds.firstOrNull()
         val known = (recent + liked).map { it.id }.toSet()
         val rec = async {
-            seed?.youtubeId?.let { vid -> runCatchingCancellable { graph.music.radio(vid, 30) }.getOrDefault(emptyList()) }
-                ?.filter { it.id !in known && !graph.library.isBlocked(it) }?.take(20).orEmpty()
+            if (seeds.isEmpty()) emptyList()
+            else runCatchingCancellable {
+                graph.music.multiSeedRadio(seeds = seeds, excludeIds = known, limit = 20)
+            }.getOrDefault(emptyList())
+                .filter { it.id !in known && !graph.library.isBlocked(it) }.take(20)
         }
         val pop = async {
             runCatchingCancellable { graph.music.searchSongs(popularQuery(graph.settings.current.language), 20) }.getOrDefault(emptyList())
@@ -281,19 +285,19 @@ fun HomeScreen() {
                 }
                 if (workout && feed.workout.isNotEmpty()) item {
                     Shelf(t("gymMix"), feed.workout, icon = Icons.Default.FitnessCenter) { tr ->
-                        ShelfCard(tr.title, tr.artist, tr.artworkUrl, onClick = { actions.play(feed.workout, feed.workout.indexOf(tr)) },
+                        ShelfCard(tr.title, tr.artist, rememberTrackArtwork(tr), onClick = { actions.play(feed.workout, feed.workout.indexOf(tr)) },
                             onLongClick = { actions.showMenu(tr, MenuContext()) }, onPlay = { actions.play(feed.workout, feed.workout.indexOf(tr)) })
                     }
                 }
                 if (music) item {
                     Shelf(t("recentlyPlayed"), recent) { tr ->
-                        ShelfCard(tr.title, tr.artist, tr.artworkUrl, onClick = { actions.play(recent, recent.indexOf(tr)) },
+                        ShelfCard(tr.title, tr.artist, rememberTrackArtwork(tr), onClick = { actions.play(recent, recent.indexOf(tr)) },
                             onLongClick = { actions.showMenu(tr, MenuContext()) })
                     }
                 }
                 if (music) item {
                     Shelf(t("popularMusic"), feed.popular, action = { SectionLink(t("searchMore")) { actions.nav.navigate(SearchRoute) } }) { tr ->
-                        ShelfCard(tr.title, tr.artist, tr.artworkUrl, onClick = { actions.play(feed.popular, feed.popular.indexOf(tr)) },
+                        ShelfCard(tr.title, tr.artist, rememberTrackArtwork(tr), onClick = { actions.play(feed.popular, feed.popular.indexOf(tr)) },
                             onLongClick = { actions.showMenu(tr, MenuContext()) }, onPlay = { actions.play(feed.popular, feed.popular.indexOf(tr)) })
                     }
                 }
@@ -307,7 +311,7 @@ fun HomeScreen() {
                         }
                     } else item {
                         Shelf(recTitle, feed.recommended, icon = Icons.Default.AutoAwesome, action = { SectionLink(t("explore")) { filter = HomeFilter.FOR_YOU } }) { tr ->
-                            ShelfCard(tr.title, tr.artist, tr.artworkUrl, onClick = { actions.play(feed.recommended, feed.recommended.indexOf(tr)) },
+                            ShelfCard(tr.title, tr.artist, rememberTrackArtwork(tr), onClick = { actions.play(feed.recommended, feed.recommended.indexOf(tr)) },
                                 onLongClick = { actions.showMenu(tr, MenuContext()) }, onPlay = { actions.play(feed.recommended, feed.recommended.indexOf(tr)) })
                         }
                     }

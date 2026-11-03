@@ -35,6 +35,7 @@ data class Track(
     /** Square cover that always exists for YouTube songs (the stored URL may be missing). */
     val artworkUrl: String?
         get() = coverUrl?.takeIf { it.startsWith("http") || it.startsWith("content:") || it.startsWith("file:") }
+            ?.let { com.spotifree.app.data.remote.YouTubeIds.upgradeArtwork(it) ?: it }
             ?: youtubeId?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
 
     companion object {

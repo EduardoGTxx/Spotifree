@@ -28,6 +28,9 @@ object MediaItems {
     @Volatile
     var localCover: (trackId: String) -> String? = { null }
 
+    @Volatile
+    var resolvedCover: (trackId: String) -> String? = { null }
+
     fun uriFor(track: Track): Uri = Uri.Builder()
         .scheme(SCHEME)
         .authority("track")
@@ -38,29 +41,31 @@ object MediaItems {
     fun trackIdOf(uri: Uri): String? = if (uri.scheme == SCHEME) uri.pathSegments.firstOrNull() else null
 
     fun toMediaItem(track: Track): MediaItem {
+        val effectiveCover = resolvedCover(track.id) ?: track.coverUrl
+        val effectiveTrack = if (effectiveCover != track.coverUrl) track.copy(coverUrl = effectiveCover) else track
         val extras = Bundle().apply {
-            putString(EXTRA_ID, track.id)
-            track.youtubeId?.let { putString(EXTRA_VIDEO, it) }
-            putInt(EXTRA_DURATION, track.durationSec)
-            track.searchQuery?.let { putString(EXTRA_QUERY, it) }
-            track.localUri?.let { putString(EXTRA_LOCAL, it) }
-            track.artistUrl?.let { putString(EXTRA_ARTIST_URL, it) }
-            track.coverUrl?.let { putString(EXTRA_COVER, it) }
+            putString(EXTRA_ID, effectiveTrack.id)
+            effectiveTrack.youtubeId?.let { putString(EXTRA_VIDEO, it) }
+            putInt(EXTRA_DURATION, effectiveTrack.durationSec)
+            effectiveTrack.searchQuery?.let { putString(EXTRA_QUERY, it) }
+            effectiveTrack.localUri?.let { putString(EXTRA_LOCAL, it) }
+            effectiveTrack.artistUrl?.let { putString(EXTRA_ARTIST_URL, it) }
+            effectiveTrack.coverUrl?.let { putString(EXTRA_COVER, it) }
         }
         val metadata = MediaMetadata.Builder()
-            .setTitle(track.title)
-            .setArtist(track.artist)
-            .setAlbumTitle(track.album.ifBlank { null })
-            .setArtworkUri(localCover(track.id)?.let { Uri.fromFile(java.io.File(it)) } ?: track.artworkUrl?.let { Uri.parse(it) })
-            .setDurationMs(if (track.durationSec > 0) track.durationSec * 1000L else null)
+            .setTitle(effectiveTrack.title)
+            .setArtist(effectiveTrack.artist)
+            .setAlbumTitle(effectiveTrack.album.ifBlank { null })
+            .setArtworkUri(localCover(effectiveTrack.id)?.let { Uri.fromFile(java.io.File(it)) } ?: effectiveTrack.artworkUrl?.let { Uri.parse(it) })
+            .setDurationMs(if (effectiveTrack.durationSec > 0) effectiveTrack.durationSec * 1000L else null)
             .setIsPlayable(true)
             .setIsBrowsable(false)
             .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
             .setExtras(extras)
             .build()
         return MediaItem.Builder()
-            .setMediaId(track.id)
-            .setUri(uriFor(track))
+            .setMediaId(effectiveTrack.id)
+            .setUri(uriFor(effectiveTrack))
             .setMediaMetadata(metadata)
             .build()
     }
@@ -68,13 +73,14 @@ object MediaItems {
     fun toTrack(item: MediaItem): Track {
         val md = item.mediaMetadata
         val ex = md.extras
+        val id = ex?.getString(EXTRA_ID) ?: item.mediaId
         return Track(
-            id = ex?.getString(EXTRA_ID) ?: item.mediaId,
+            id = id,
             title = md.title?.toString() ?: "",
             artist = md.artist?.toString() ?: "",
             album = md.albumTitle?.toString() ?: "",
             durationSec = ex?.getInt(EXTRA_DURATION) ?: ((md.durationMs ?: 0L) / 1000).toInt(),
-            coverUrl = ex?.getString(EXTRA_COVER) ?: md.artworkUri?.toString(),
+            coverUrl = resolvedCover(id) ?: ex?.getString(EXTRA_COVER) ?: md.artworkUri?.toString(),
             videoId = ex?.getString(EXTRA_VIDEO) ?: item.localConfiguration?.uri?.getQueryParameter("v"),
             searchQuery = ex?.getString(EXTRA_QUERY),
             localUri = ex?.getString(EXTRA_LOCAL),

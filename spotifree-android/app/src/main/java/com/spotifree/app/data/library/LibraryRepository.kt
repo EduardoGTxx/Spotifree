@@ -15,6 +15,7 @@ import com.spotifree.app.data.db.TrackEntity
 import com.spotifree.app.data.model.Playlist
 import com.spotifree.app.data.model.Track
 import com.spotifree.app.data.remote.MusicRepository
+import com.spotifree.app.data.remote.YouTubeIds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -90,13 +91,18 @@ class LibraryRepository(
         return ids.mapNotNull { byId[it] }
     }
 
-    /** Keeps a song in the library. Known songs keep their data; a newly resolved video id is stored. */
+    /** Keeps a song in the library. Known songs keep their data; a newly resolved video id or upgraded HD cover is stored. */
     suspend fun save(track: Track) {
         val existing = tracks.get(track.id)
         if (existing == null) {
             tracks.upsert(TrackEntity.from(track))
-        } else if (existing.videoId == null) {
-            track.youtubeId?.let { vid -> tracks.setResolved(track.id, vid, track.coverUrl, track.durationSec) }
+        } else {
+            if (existing.videoId == null) {
+                track.youtubeId?.let { vid -> tracks.setResolved(track.id, vid, track.coverUrl, track.durationSec) }
+            }
+            if (YouTubeIds.isLowResVideoThumbnail(existing.coverUrl) && !YouTubeIds.isLowResVideoThumbnail(track.coverUrl)) {
+                tracks.setCover(track.id, track.coverUrl)
+            }
         }
     }
 
@@ -285,12 +291,14 @@ class LibraryRepository(
 
     suspend fun recordPlay(track: Track, seconds: Int) {
         if (seconds < 5) return
+        val storedCover = tracks.get(track.id)?.coverUrl?.takeIf { !YouTubeIds.isLowResVideoThumbnail(it) }
+            ?.let { YouTubeIds.upgradeArtwork(it) ?: it }
         db.history().insert(
             HistoryEntity(
                 trackId = track.id,
                 title = track.title,
                 artist = track.artist,
-                coverUrl = track.artworkUrl,
+                coverUrl = storedCover ?: track.artworkUrl,
                 playedAt = System.currentTimeMillis() - seconds * 1000L,
                 secondsPlayed = seconds,
             )

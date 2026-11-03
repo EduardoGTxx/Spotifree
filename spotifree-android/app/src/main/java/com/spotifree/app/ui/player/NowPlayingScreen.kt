@@ -1,5 +1,6 @@
 package com.spotifree.app.ui.player
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.filled.Cast
@@ -81,6 +82,7 @@ import com.spotifree.app.ui.LocalGraph
 import com.spotifree.app.ui.MenuContext
 import com.spotifree.app.ui.common.Artwork
 import com.spotifree.app.ui.common.formatMs
+import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
 import com.spotifree.app.ui.theme.onColor
@@ -95,61 +97,72 @@ fun NowPlayingScreen(onClose: () -> Unit) {
     val liked by graph.library.likedIds.collectAsStateWithLifecycle()
     val track = state.current ?: return
     val c = LocalSpotifreeColors.current
-    val cover by rememberCoverColor(track.artworkUrl, c.elevated)
+    val artworkUrl = rememberTrackArtwork(track)
+    val cover by rememberCoverColor(artworkUrl, c.elevated)
     val animated by animateColorAsState(cover, tween(600), label = "bg")
     var showLyrics by remember { mutableStateOf(false) }
     var sheet by remember { mutableStateOf(PlayerSheet.NONE) }
     val landscape = LocalConfiguration.current.screenWidthDp > LocalConfiguration.current.screenHeightDp
     val dragY = remember { mutableFloatStateOf(0f) }
 
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(animated, if (c.amoled) Color.Black else c.background)))
-            .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onDragEnd = {
-                        if (dragY.floatValue > 200) onClose()
-                        dragY.floatValue = 0f
-                    },
-                    onVerticalDrag = { _, d -> dragY.floatValue += d },
-                )
-            }
-            .statusBarsPadding()
-            .navigationBarsPadding(),
-    ) {
-        Column(Modifier.fillMaxSize()) {
-            // Top bar
-            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onClose) { Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(30.dp)) }
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(t("nowPlaying").uppercase(), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
-                    Text(track.album.ifBlank { track.artist }, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                IconButton(onClick = { actions.showMenu(track, MenuContext()) }) { Icon(Icons.Default.MoreVert, null) }
-            }
+    BackHandler(enabled = showLyrics) {
+        showLyrics = false
+    }
 
-            if (landscape) {
-                Row(Modifier.weight(1f).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Crossfade(showLyrics, label = "lyrics") { lyr ->
-                            if (lyr) LyricsView(track, Modifier.fillMaxSize()) else CoverArt(track.artworkUrl, onSwipe = { if (it < 0) graph.player.next() else graph.player.previous() })
+    Crossfade(targetState = showLyrics, animationSpec = tween(280), label = "fullscreen_lyrics") { lyr ->
+        if (lyr) {
+            LyricsView(
+                track = track,
+                onMinimize = { showLyrics = false },
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Brush.verticalGradient(listOf(animated, if (c.amoled) Color.Black else c.background)))
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures(
+                            onDragEnd = {
+                                if (dragY.floatValue > 200) onClose()
+                                dragY.floatValue = 0f
+                            },
+                            onVerticalDrag = { _, d -> dragY.floatValue += d },
+                        )
+                    }
+                    .statusBarsPadding()
+                    .navigationBarsPadding(),
+            ) {
+                Column(Modifier.fillMaxSize()) {
+                    // Top bar
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onClose) { Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(30.dp)) }
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(t("nowPlaying").uppercase(), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
+                            Text(track.album.ifBlank { track.artist }, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        IconButton(onClick = { actions.showMenu(track, MenuContext()) }) { Icon(Icons.Default.MoreVert, null) }
+                    }
+
+                    if (landscape) {
+                        Row(Modifier.weight(1f).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CoverArt(artworkUrl, onSwipe = { if (it < 0) graph.player.next() else graph.player.previous() })
+                            }
+                            Column(Modifier.weight(1f).padding(start = 16.dp)) {
+                                TitleRow(track.title, track.artist, track.id in liked, onLike = { actions.toggleLike(track) }, onArtist = { onClose(); actions.openArtist(track) })
+                                Controls(onSheet = { sheet = it }, showLyrics = showLyrics, onToggleLyrics = { showLyrics = !showLyrics })
+                            }
+                        }
+                    } else {
+                        Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
+                            CoverArt(artworkUrl, onSwipe = { if (it < 0) graph.player.next() else graph.player.previous() })
+                        }
+                        Column(Modifier.padding(horizontal = 24.dp)) {
+                            TitleRow(track.title, track.artist, track.id in liked, onLike = { actions.toggleLike(track) }, onArtist = { onClose(); actions.openArtist(track) })
+                            Controls(onSheet = { sheet = it }, showLyrics = showLyrics, onToggleLyrics = { showLyrics = !showLyrics })
                         }
                     }
-                    Column(Modifier.weight(1f).padding(start = 16.dp)) {
-                        TitleRow(track.title, track.artist, track.id in liked, onLike = { actions.toggleLike(track) }, onArtist = { onClose(); actions.openArtist(track) })
-                        Controls(onSheet = { sheet = it }, showLyrics = showLyrics, onToggleLyrics = { showLyrics = !showLyrics })
-                    }
-                }
-            } else {
-                Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
-                    Crossfade(showLyrics, label = "lyrics") { lyr ->
-                        if (lyr) LyricsView(track, Modifier.fillMaxSize()) else CoverArt(track.artworkUrl, onSwipe = { if (it < 0) graph.player.next() else graph.player.previous() })
-                    }
-                }
-                Column(Modifier.padding(horizontal = 24.dp)) {
-                    TitleRow(track.title, track.artist, track.id in liked, onLike = { actions.toggleLike(track) }, onArtist = { onClose(); actions.openArtist(track) })
-                    Controls(onSheet = { sheet = it }, showLyrics = showLyrics, onToggleLyrics = { showLyrics = !showLyrics })
                 }
             }
         }

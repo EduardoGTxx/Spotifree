@@ -68,6 +68,26 @@ fun formatDuration(sec: Int): String {
 
 fun formatMs(ms: Long) = formatDuration((ms / 1000).toInt()).ifEmpty { "0:00" }
 
+/**
+ * Returns the best available HD square artwork URL for [track], triggering the 4-provider
+ * waterfall (`iTunes -> Cover Art Archive -> Deezer -> YouTube Music Square`) in the background
+ * whenever [track] has no cover or only has a low-res 4:3 `ytimg.com` video frame.
+ */
+@Composable
+fun rememberTrackArtwork(track: Track): String? {
+    val graph = LocalGraph.current
+    val resolved by graph.artwork.resolvedCovers.collectAsStateWithLifecycle()
+    val overrideUrl = resolved[track.id]
+    if (overrideUrl == null && !track.isLocal) {
+        LaunchedEffect(track.id, track.coverUrl) {
+            if (graph.artwork.needsCoverUpgrade(track)) {
+                graph.artwork.ensureCover(track)
+            }
+        }
+    }
+    return overrideUrl ?: track.artworkUrl
+}
+
 @Composable
 fun Artwork(
     url: String?,
@@ -146,9 +166,8 @@ fun TrackRow(
             Spacer(Modifier.width(8.dp))
         }
         if (showArtwork) {
-            // Imported songs have no cover until played: look one up while the row is visible
-            if (track.artworkUrl == null && !track.isLocal) LaunchedEffect(track.id) { graph.artwork.ensureCover(track) }
-            Artwork(track.artworkUrl, size = 48.dp)
+            val coverUrl = rememberTrackArtwork(track)
+            Artwork(coverUrl, size = 48.dp)
             Spacer(Modifier.width(12.dp))
         }
         Column(Modifier.weight(1f)) {

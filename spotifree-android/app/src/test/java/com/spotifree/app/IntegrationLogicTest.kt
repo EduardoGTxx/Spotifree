@@ -97,6 +97,50 @@ class IntegrationLogicTest {
         assertTrue(ArtworkResolver.matches("Bad Bunny", "Tití Me Preguntó", "Bad Bunny", "Titi Me Pregunto"))
         assertTrue(ArtworkResolver.matches("Rosalía", "DESPECHÁ", "ROSALÍA", "Despechá (Remix)"))
         assertFalse(ArtworkResolver.matches("Coldplay", "Yellow", "Bad Bunny", "Yellow"))
+        // Properly matches when raw YouTube title includes "Artist - Title" prefix
+        assertTrue(ArtworkResolver.matches("Rihanna", "Diamonds", "Rihanna", "Rihanna - Diamonds (Official Music Video)"))
+        assertTrue(ArtworkResolver.matches("Arctic Monkeys", "505", "Arctic Monkeys", "Arctic Monkeys - 505"))
+        // Rejects karaoke / tribute knockoffs
+        assertFalse(ArtworkResolver.matches("Rihanna", "Diamonds (Karaoke Version)", "Rihanna", "Diamonds"))
+        assertFalse(ArtworkResolver.matches("Rihanna Tribute Band", "Diamonds (Originally Performed By Rihanna)", "Rihanna", "Diamonds"))
+        // Short titles must not match as substrings inside longer unrelated titles
+        assertFalse(ArtworkResolver.matches("Rihanna", "I", "Rihanna", "Diamonds"))
+    }
+
+    @Test
+    fun artworkCleanArtistAndTitle() {
+        assertEquals(
+            "Rihanna" to "Diamonds",
+            ArtworkResolver.cleanArtistAndTitle("Rihanna", "Rihanna - Diamonds (Official Music Video)"),
+        )
+        assertEquals(
+            "Arctic Monkeys" to "505",
+            ArtworkResolver.cleanArtistAndTitle("Arctic Monkeys", "Arctic Monkeys - 505"),
+        )
+        assertEquals(
+            "Rihanna" to "Diamonds",
+            ArtworkResolver.cleanArtistAndTitle("YouTube", "Rihanna - Diamonds"),
+        )
+        assertEquals(
+            "Queen" to "Bohemian Rhapsody",
+            ArtworkResolver.cleanArtistAndTitle("Queen - Topic", "Bohemian Rhapsody - Remastered 2011"),
+        )
+    }
+
+    @Test
+    fun artworkUpgradeAndLowResDetection() {
+        assertEquals(
+            "https://lh3.googleusercontent.com/abc123=w1200-h1200-l90-rj",
+            com.spotifree.app.data.remote.YouTubeIds.upgradeArtwork("https://lh3.googleusercontent.com/abc123=w544-h544-l90-rj"),
+        )
+        assertEquals(
+            "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/1000x1000bb.jpg",
+            com.spotifree.app.data.remote.YouTubeIds.upgradeArtwork("https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/100x100bb.jpg"),
+        )
+        assertTrue(com.spotifree.app.data.remote.YouTubeIds.isLowResVideoThumbnail(null))
+        assertTrue(com.spotifree.app.data.remote.YouTubeIds.isLowResVideoThumbnail("https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg"))
+        assertFalse(com.spotifree.app.data.remote.YouTubeIds.isLowResVideoThumbnail("https://lh3.googleusercontent.com/abc123=w1200-h1200-l90-rj"))
+        assertFalse(com.spotifree.app.data.remote.YouTubeIds.isLowResVideoThumbnail("https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/1000x1000bb.jpg"))
     }
 
     @Test
@@ -119,5 +163,65 @@ class IntegrationLogicTest {
         )
         val filtered = searchPool.filter { it.id !in existingQueueIds && it.id != blockedId }
         assertEquals(listOf("rec-1", "rec-2"), filtered.map { it.id })
+    }
+
+    @Test
+    fun cleanTrackTitleStripsVideoNoiseButKeepsRemixes() {
+        assertEquals(
+            "Starlight Horizon",
+            com.spotifree.app.data.remote.MusicRepository.cleanTrackTitle("Starlight Horizon (Official Music Video)"),
+        )
+        assertEquals(
+            "Midnight Echoes (Club Remix)",
+            com.spotifree.app.data.remote.MusicRepository.cleanTrackTitle("Midnight Echoes (Club Remix) [Official Audio]"),
+        )
+    }
+
+    @Test
+    fun spreadArtistsPreventsConsecutiveSameArtist() {
+        val input = listOf(
+            com.spotifree.app.data.model.Track(id = "1", title = "Song 1", artist = "Artist Alpha"),
+            com.spotifree.app.data.model.Track(id = "2", title = "Song 2", artist = "Artist Alpha feat. Guest"),
+            com.spotifree.app.data.model.Track(id = "3", title = "Song 3", artist = "Artist Beta"),
+            com.spotifree.app.data.model.Track(id = "4", title = "Song 4", artist = "Artist Gamma"),
+        )
+        val spread = com.spotifree.app.data.remote.MusicRepository.spreadArtists(input)
+        assertEquals(4, spread.size)
+        for (i in 0 until spread.size - 1) {
+            val a1 = spread[i].artist.substringBefore(" ")
+            val a2 = spread[i + 1].artist.substringBefore(" ")
+            if (a1 == "Artist") {
+                assertFalse("Same primary artist back-to-back at index $i", spread[i].artist.startsWith("Artist Alpha") && spread[i + 1].artist.startsWith("Artist Alpha"))
+            }
+        }
+    }
+
+    @Test
+    fun multiSeedHelpersPickDiverseArtistsAndInterleave() {
+        val playlist = listOf(
+            com.spotifree.app.data.model.Track(id = "en-1", title = "English 1", artist = "English Singer", videoId = "v1"),
+            com.spotifree.app.data.model.Track(id = "en-2", title = "English 2", artist = "English Singer", videoId = "v2"),
+            com.spotifree.app.data.model.Track(id = "es-1", title = "Spanish 1", artist = "Cantante Latino", videoId = "v3"),
+            com.spotifree.app.data.model.Track(id = "fr-1", title = "French 1", artist = "Artiste Francais", videoId = "v4"),
+        )
+        val seeds = com.spotifree.app.data.remote.MusicRepository.pickDiverseSeeds(playlist, maxSeeds = 3)
+        assertEquals(3, seeds.size)
+        assertEquals("en-1", seeds.first().id)
+        assertEquals(3, seeds.map { it.artist }.distinct().size)
+
+        val interleaved = com.spotifree.app.data.remote.MusicRepository.interleaveLists(
+            listOf(listOf("A1", "A2"), listOf("B1", "B2"), listOf("C1")),
+        )
+        assertEquals(listOf("A1", "B1", "C1", "A2", "B2"), interleaved)
+    }
+
+    @Test
+    fun karaokeWordInterpolationDistributesTimestampsAcrossLine() {
+        val words = com.spotifree.app.ui.player.interpolateWords("one two three four", startSec = 10.0, endSec = 14.0)
+        assertEquals(4, words.size)
+        assertEquals("one two three four", words.joinToString("") { it.text })
+        assertEquals(10.0, words.first().timeSec, 0.001)
+        assertTrue(words.zipWithNext().all { (a, b) -> b.timeSec > a.timeSec })
+        assertTrue(words.last().timeSec < 14.0)
     }
 }
