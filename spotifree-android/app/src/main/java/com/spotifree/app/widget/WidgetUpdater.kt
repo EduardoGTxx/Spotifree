@@ -8,11 +8,13 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
 import androidx.media3.common.Player
-import coil3.ImageLoader
+import coil3.SingletonImageLoader
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.request.allowHardware
 import coil3.toBitmap
+import com.spotifree.app.AppGraph
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -59,9 +61,18 @@ object WidgetUpdater {
         }
     }
 
+    internal fun networkPolicy(offlineMode: Boolean, url: String): CachePolicy =
+        if (offlineMode && (url.startsWith("http://") || url.startsWith("https://"))) CachePolicy.DISABLED else CachePolicy.ENABLED
+
     private suspend fun loadCover(context: Context, url: String): Bitmap? = runCatchingCancellable {
-        val result = ImageLoader(context).execute(
-            ImageRequest.Builder(context).data(url).size(192).allowHardware(false).build()
+        val offline = AppGraph.get(context).settings.current.offlineMode
+        val result = SingletonImageLoader.get(context).execute(
+            ImageRequest.Builder(context)
+                .data(url)
+                .size(192)
+                .allowHardware(false)
+                .networkCachePolicy(networkPolicy(offline, url))
+                .build()
         )
         (result as? SuccessResult)?.image?.toBitmap()
     }.getOrNull()

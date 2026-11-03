@@ -249,4 +249,10 @@ class IntegrationLogicTest {
             // Expected
         }
     }
+
+    @Test
+    fun widgetUpdaterDisablesNetworkInOfflineMode() {
+        assertEquals(coil3.request.CachePolicy.DISABLED, com.spotifree.app.widget.WidgetUpdater.networkPolicy(true, "https://i.ytimg.com/vi/abc/hqdefault.jpg"))
+        assertEquals(coil3.request.CachePolicy.ENABLED, com.spotifree.app.widget.WidgetUpdater.networkPolicy(false, "https://i.ytimg.com/vi/abc/hqdefault.jpg"))
+    }
 }
