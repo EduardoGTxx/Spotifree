@@ -40,6 +40,7 @@ class CastSupport(
     }
 
     override fun onCastSessionAvailable() {
+        if (graph.settings.current.offlineMode) return
         if (local.mediaItemCount == 0) {
             switchPlayer(castPlayer)
             return
@@ -79,6 +80,7 @@ class CastSupport(
     }
 
     private suspend fun resolve(item: MediaItem): MediaItem? {
+        if (graph.settings.current.offlineMode) return null
         val track = MediaItems.toTrack(item)
         if (track.isLocal) return null
         val videoId = track.youtubeId

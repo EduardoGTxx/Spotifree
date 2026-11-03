@@ -198,8 +198,10 @@ fun MainScreen(activity: MainActivity) {
 
     // Update check once per launch (silent when offline or up to date)
     LaunchedEffect(Unit) {
-        val r = runCatchingCancellable { graph.updates.check() }.getOrNull()
-        if (r is UpdateCheck.Available && r.update.version != settings.dismissedUpdateVersion) update = r.update
+        if (!graph.settings.current.offlineMode) {
+            val r = runCatchingCancellable { graph.updates.check() }.getOrNull()
+            if (r is UpdateCheck.Available && r.update.version != settings.dismissedUpdateVersion) update = r.update
+        }
     }
 
     // Automatic backup on exit / at startup when due
@@ -349,6 +351,7 @@ private suspend fun handleIntent(intent: Intent, actions: AppActions, onOpenPlay
     when (intent.action) {
         MainActivity.ACTION_OPEN_PLAYER -> onOpenPlayer()
         Intent.ACTION_SEND, Intent.ACTION_VIEW -> {
+            if (graph.settings.current.offlineMode) return
             val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: intent.dataString ?: return
             val url = Regex("""https?://\S+""").find(text)?.value ?: return
             val list = YouTubeIds.playlistId(url)
@@ -369,7 +372,11 @@ private suspend fun handleIntent(intent: Intent, actions: AppActions, onOpenPlay
                 graph.player.play()
                 return
             }
-            val found = runCatchingCancellable { graph.music.searchSongs(q, 1) }.getOrNull()?.firstOrNull() ?: return
+            val found = if (graph.settings.current.offlineMode) {
+                graph.db.tracks().searchLocal(q, 1).firstOrNull()?.toTrack()
+            } else {
+                runCatchingCancellable { graph.music.searchSongs(q, 1) }.getOrNull()?.firstOrNull()
+            } ?: return
             actions.play(listOf(found))
         }
     }

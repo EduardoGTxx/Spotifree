@@ -66,6 +66,7 @@ class DriveBackup(private val context: Context, private val graph: AppGraph) {
     }
 
     suspend fun upload(interactive: Boolean = true): DriveResult = withContext(Dispatchers.IO) {
+        if (graph.settings.current.offlineMode) return@withContext DriveResult.Failed("offline")
         val token = when (val t = token(interactive)) {
             is Token.Ok -> t.token
             is Token.Consent -> return@withContext DriveResult.NeedsConsent(t.intent)
@@ -91,6 +92,7 @@ class DriveBackup(private val context: Context, private val graph: AppGraph) {
     }
 
     suspend fun download(interactive: Boolean = true): DriveResult = withContext(Dispatchers.IO) {
+        if (graph.settings.current.offlineMode) return@withContext DriveResult.Failed("offline")
         val token = when (val t = token(interactive)) {
             is Token.Ok -> t.token
             is Token.Consent -> return@withContext DriveResult.NeedsConsent(t.intent)

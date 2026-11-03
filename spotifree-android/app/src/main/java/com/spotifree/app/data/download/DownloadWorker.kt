@@ -25,6 +25,7 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val graph = AppGraph.get(applicationContext)
+        if (graph.settings.current.offlineMode) return@withContext Result.retry()
         val repo = graph.downloads
         val dao = graph.db.downloads()
         val trackId = inputData.getString(KEY_TRACK_ID) ?: return@withContext Result.failure()

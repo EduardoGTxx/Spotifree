@@ -18,7 +18,7 @@ class AutoBackupWorker(context: Context, params: WorkerParameters) : CoroutineWo
         val graph = AppGraph.get(applicationContext)
         val backup = BackupManager(applicationContext, graph.db, graph.settings)
         runCatchingCancellable { backup.runAutoBackupIfDue(graph.account.account.value, "scheduled") }
-        if (graph.settings.current.driveAutoBackup) {
+        if (graph.settings.current.driveAutoBackup && !graph.settings.current.offlineMode) {
             runCatchingCancellable { DriveBackup(applicationContext, graph).upload(interactive = false) }
         }
         return Result.success()

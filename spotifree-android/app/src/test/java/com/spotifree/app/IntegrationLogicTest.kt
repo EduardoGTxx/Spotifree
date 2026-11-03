@@ -231,4 +231,22 @@ class IntegrationLogicTest {
         assertTrue(picks.zipWithNext().all { (a, b) -> a != b })
         assertTrue(picks.distinct().size >= 3)
     }
+
+    @Test
+    fun offlineModeFirewallBlocksHttpAndDnsImmediately() {
+        var offline = true
+        val client = AppGraph.buildHttpClient(isOffline = { offline })
+        try {
+            client.newCall(okhttp3.Request.Builder().url("https://example.com").build()).execute()
+            fail("HTTP call must be blocked in Offline Mode")
+        } catch (_: com.spotifree.app.playback.OfflineModeException) {
+            // Expected: blocked before any socket or DNS resolution
+        }
+        try {
+            client.dns.lookup("example.com")
+            fail("DNS lookup must be blocked in Offline Mode")
+        } catch (_: com.spotifree.app.playback.OfflineModeException) {
+            // Expected
+        }
+    }
 }

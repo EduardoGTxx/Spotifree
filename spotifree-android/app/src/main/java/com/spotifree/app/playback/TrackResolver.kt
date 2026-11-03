@@ -79,10 +79,15 @@ class TrackResolver(
         val offline = settings.current.offlineMode || !Network.isOnline(context)
         if (offline) {
             val format = db.cache().format(videoId) ?: throw TrackUnavailableException(trackId, "offline")
+            val key = cacheKey(videoId, format.itag)
+            val streamCache = cacheInstance
+            if (streamCache != null && streamCache.getCachedBytes(key, 0L, androidx.media3.common.C.LENGTH_UNSET.toLong()) <= 0L) {
+                throw TrackUnavailableException(trackId, "offline")
+            }
             // Served entirely from the streaming cache when the song was played before
             return dataSpec.buildUpon()
                 .setUri(Uri.parse("https://offline.spotifree/$videoId"))
-                .setKey(cacheKey(videoId, format.itag))
+                .setKey(key)
                 .build()
         }
         val resolved = try {
@@ -121,7 +126,19 @@ class TrackResolver(
         ): DataSource.Factory {
             val okHttp = OkHttpDataSource.Factory(http)
                 .setDefaultRequestProperties(mapOf("User-Agent" to NewPipeDownloader.USER_AGENT))
-            val upstream = DefaultDataSource.Factory(context, okHttp)
+            val rawUpstream = DefaultDataSource.Factory(context, okHttp)
+            val upstream = DataSource.Factory {
+                val delegate = rawUpstream.createDataSource()
+                object : DataSource by delegate {
+                    override fun open(dataSpec: DataSpec): Long {
+                        val scheme = dataSpec.uri.scheme?.lowercase()
+                        if ((scheme == "http" || scheme == "https") && resolver.settings.current.offlineMode) {
+                            throw OfflineModeException()
+                        }
+                        return delegate.open(dataSpec)
+                    }
+                }
+            }
             val cached = DataSource.Factory {
                 val cacheSource = CacheDataSource.Factory()
                     .setCache(cache)

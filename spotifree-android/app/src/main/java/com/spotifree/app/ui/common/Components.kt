@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.SubcomposeAsyncImage
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import com.spotifree.app.data.db.DownloadState
 import com.spotifree.app.data.model.Track
@@ -76,16 +77,19 @@ fun formatMs(ms: Long) = formatDuration((ms / 1000).toInt()).ifEmpty { "0:00" }
 @Composable
 fun rememberTrackArtwork(track: Track): String? {
     val graph = LocalGraph.current
+    val settings by graph.settings.settings.collectAsStateWithLifecycle()
+    val downloads by graph.downloads.all.collectAsStateWithLifecycle()
     val resolved by graph.artwork.resolvedCovers.collectAsStateWithLifecycle()
+    val localCover = downloads[track.id]?.coverPath?.takeIf { it.isNotBlank() }
     val overrideUrl = resolved[track.id]
-    if (overrideUrl == null && !track.isLocal) {
-        LaunchedEffect(track.id, track.coverUrl) {
-            if (graph.artwork.needsCoverUpgrade(track)) {
+    if (localCover == null && overrideUrl == null && !track.isLocal && !settings.offlineMode) {
+        LaunchedEffect(track.id, track.coverUrl, settings.offlineMode) {
+            if (!settings.offlineMode && graph.artwork.needsCoverUpgrade(track)) {
                 graph.artwork.ensureCover(track)
             }
         }
     }
-    return overrideUrl ?: track.artworkUrl
+    return localCover ?: overrideUrl ?: track.artworkUrl
 }
 
 @Composable
@@ -97,6 +101,8 @@ fun Artwork(
     placeholder: ImageVector = Icons.Default.MusicNote,
 ) {
     val c = LocalSpotifreeColors.current
+    val graph = LocalGraph.current
+    val settings by graph.settings.settings.collectAsStateWithLifecycle()
     val base = (if (size != null) modifier.size(size) else modifier).clip(shape).background(c.elevated)
     if (url.isNullOrBlank()) {
         Box(base, contentAlignment = Alignment.Center) {
@@ -105,7 +111,13 @@ fun Artwork(
         return
     }
     val context = LocalContext.current
-    val request = remember(url) { ImageRequest.Builder(context).data(url).build() }
+    val offline = settings.offlineMode
+    val request = remember(url, offline) {
+        ImageRequest.Builder(context)
+            .data(url)
+            .networkCachePolicy(if (offline) CachePolicy.DISABLED else CachePolicy.ENABLED)
+            .build()
+    }
     // YouTube video thumbnails (hqdefault) are 4:3 with black bars around a 16:9 frame: zoom in
     // so the square shows the picture, like the official app.
     val zoom = if (url.contains("i.ytimg.com") && (url.contains("hqdefault") || url.contains("sddefault"))) 1.34f else 1f

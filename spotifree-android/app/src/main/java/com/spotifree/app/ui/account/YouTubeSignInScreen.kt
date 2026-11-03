@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -20,7 +22,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.spotifree.app.ui.LocalGraph
+import com.spotifree.app.ui.common.EmptyState
 import com.spotifree.app.ui.detail.DetailTopBar
 import com.spotifree.app.ui.i18n.LocalStrings
 import com.spotifree.app.ui.i18n.t
@@ -36,6 +40,7 @@ fun YouTubeSignInScreen(onBack: () -> Unit) {
     val graph = LocalGraph.current
     val strings = LocalStrings.current
     val scope = rememberCoroutineScope()
+    val appSettings by graph.settings.settings.collectAsStateWithLifecycle()
     var loading by remember { mutableStateOf(true) }
     var done by remember { mutableStateOf(false) }
     val cookies = remember { CookieManager.getInstance() }
@@ -44,10 +49,15 @@ fun YouTubeSignInScreen(onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         DetailTopBar(t("connectGoogle"), onBack)
+        if (appSettings.offlineMode) {
+            EmptyState(Icons.Default.CloudOff, t("offlineModeOn"))
+            return@Column
+        }
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         Box(Modifier.fillMaxSize()) {
             AndroidView(factory = { ctx ->
                 WebView(ctx).apply {
+                    settings.blockNetworkLoads = appSettings.offlineMode
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     // Google rejects embedded WebViews that announce themselves as such

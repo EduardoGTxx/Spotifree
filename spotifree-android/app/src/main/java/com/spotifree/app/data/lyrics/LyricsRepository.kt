@@ -46,7 +46,11 @@ data class LyricsResult(val lyrics: Lyrics?, val notFound: Boolean, val networkE
  *  4. KuGou (duration-matched)  5. plain lyrics as a last resort.
  * Results (and "not found" for 3 days) are cached in the database.
  */
-class LyricsRepository(private val http: OkHttpClient, private val cache: CacheDao) {
+class LyricsRepository(
+    private val http: OkHttpClient,
+    private val cache: CacheDao,
+    private val isOffline: () -> Boolean = { false },
+) {
     private val json = Json { ignoreUnknownKeys = true }
     private val memory = ConcurrentHashMap<String, LyricsResult>()
 
@@ -84,6 +88,9 @@ class LyricsRepository(private val http: OkHttpClient, private val cache: CacheD
                     }
                 }
             }
+        }
+        if (isOffline()) {
+            return@withContext LyricsResult(null, notFound = false, networkError = true)
         }
         var best: Lyrics? = null
         var networkError = false
@@ -285,6 +292,7 @@ class LyricsRepository(private val http: OkHttpClient, private val cache: CacheD
      * it). @return translated texts aligned with [lines], and the target language.
      */
     suspend fun translate(lines: List<LyricLine>, uiLanguage: String): Pair<List<String>, String> = withContext(Dispatchers.IO) {
+        if (isOffline()) throw com.spotifree.app.playback.OfflineModeException()
         val primary = if (uiLanguage == "en") "en" else uiLanguage.ifBlank { "es" }
         val secondary = if (primary == "es") "en" else "es"
         val idx = lines.indices.filter { !lines[it].isInstrumental && lines[it].text != LrcParser.INSTRUMENTAL }

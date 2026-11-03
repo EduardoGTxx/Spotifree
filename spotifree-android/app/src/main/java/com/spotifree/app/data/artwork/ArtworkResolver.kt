@@ -45,6 +45,7 @@ class ArtworkResolver(
     private val http: OkHttpClient,
     private val tracks: TrackDao,
     private val history: HistoryDao? = null,
+    private val isOffline: () -> Boolean = { false },
     /** Last resort: match the song on YouTube (also stores its video id, so it later plays at once). */
     private val youtubeFallback: suspend (Track) -> String? = { null },
 ) {
@@ -58,20 +59,20 @@ class ArtworkResolver(
 
     /** True when [track] has no cover or only has a raw 4:3 `ytimg.com` video frame that should be upgraded to square HD album art. */
     fun needsCoverUpgrade(track: Track): Boolean {
-        if (track.isLocal || track.title.isBlank()) return false
+        if (isOffline() || track.isLocal || track.title.isBlank()) return false
         if (_resolvedCovers.value.containsKey(track.id)) return false
         return YouTubeIds.isLowResVideoThumbnail(track.coverUrl)
     }
 
     /** Resolves and stores the HD square cover of [track]. Safe to call for every visible row or active player track. */
     suspend fun ensureCover(track: Track) {
-        if (!needsCoverUpgrade(track)) return
+        if (isOffline() || !needsCoverUpgrade(track)) return
         val memFailAt = failedInMemory[track.id]
         if (memFailAt != null && System.currentTimeMillis() - memFailAt < RETRY_AFTER_MS) return
         if (!inFlight.add(track.id)) return
         try {
             permits.withPermit {
-                if (_resolvedCovers.value.containsKey(track.id)) return
+                if (isOffline() || _resolvedCovers.value.containsKey(track.id)) return
                 val row = tracks.get(track.id)
                 if (row?.coverUrl != null && !YouTubeIds.isLowResVideoThumbnail(row.coverUrl)) {
                     val upgraded = YouTubeIds.upgradeArtwork(row.coverUrl) ?: row.coverUrl
@@ -102,6 +103,7 @@ class ArtworkResolver(
 
     /** Executes the 4-provider waterfall: iTunes -> Cover Art Archive -> Deezer -> YouTube Music Square. */
     suspend fun find(artist: String, title: String): String? = withContext(Dispatchers.IO) {
+        if (isOffline()) return@withContext null
         val (cleanArtist, cleanTitle) = cleanArtistAndTitle(artist, title)
         if (cleanTitle.isBlank()) return@withContext null
         runCatchingCancellable { fromItunes(cleanArtist, cleanTitle) }.getOrNull()

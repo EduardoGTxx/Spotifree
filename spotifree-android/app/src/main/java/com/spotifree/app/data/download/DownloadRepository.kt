@@ -65,7 +65,7 @@ class DownloadRepository(
     fun fileBase(trackId: String) = trackId.replace(Regex("[^A-Za-z0-9._-]"), "_")
 
     suspend fun enqueue(track: Track, manual: Boolean = true) {
-        if (track.isLocal) return
+        if (track.isLocal || settings.current.offlineMode) return
         library.save(track)
         val existing = dao.get(track.id)
         if (existing?.state == DownloadState.DONE) {

@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.palette.graphics.Palette
 import coil3.SingletonImageLoader
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.request.allowHardware
@@ -28,13 +29,21 @@ import kotlinx.coroutines.withContext
 @Composable
 fun rememberCoverColor(url: String?, fallback: Color): State<Color> {
     val context = LocalContext.current
-    return produceState(fallback, url) {
+    val graph = LocalGraph.current
+    val settings by graph.settings.settings.collectAsStateWithLifecycle()
+    val offline = settings.offlineMode
+    return produceState(fallback, url, offline) {
         if (url.isNullOrBlank()) {
             value = fallback
             return@produceState
         }
         val bitmap: Bitmap? = withContext(Dispatchers.IO) {
-            val req = ImageRequest.Builder(context).data(url).allowHardware(false).size(96).build()
+            val req = ImageRequest.Builder(context)
+                .data(url)
+                .allowHardware(false)
+                .size(96)
+                .networkCachePolicy(if (offline) CachePolicy.DISABLED else CachePolicy.ENABLED)
+                .build()
             (SingletonImageLoader.get(context).execute(req) as? SuccessResult)?.image?.toBitmap()
         }
         val swatch = bitmap?.let { b ->
