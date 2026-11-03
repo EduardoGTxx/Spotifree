@@ -177,6 +177,9 @@ fun RewindScreen(onBack: () -> Unit) {
     }
 }
 
+internal fun clampStoryIndex(index: Int, size: Int): Int =
+    if (size <= 0) 0 else index.coerceIn(0, size - 1)
+
 @Composable
 private fun Stories(d: RewindData, years: List<Int>, onYear: (Int) -> Unit, onClose: () -> Unit) {
     val stories = remember(d) {
@@ -227,7 +230,7 @@ private fun Stories(d: RewindData, years: List<Int>, onYear: (Int) -> Unit, onCl
             transitionSpec = { (fadeIn(tween(350)) + scaleIn(tween(350), initialScale = 1.04f)) togetherWith fadeOut(tween(250)) },
             label = "story",
         ) { i ->
-            val story = stories[i]
+            val story = stories[clampStoryIndex(i, stories.size)]
             StoryBackground(PALETTES.getValue(story), story) {
                 when (story) {
                     Story.INTRO -> IntroStory(d.year, years, onYear)
