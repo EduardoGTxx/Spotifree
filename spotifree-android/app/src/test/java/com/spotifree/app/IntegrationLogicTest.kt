@@ -321,4 +321,15 @@ class IntegrationLogicTest {
         assertNull(TGymBridge.parse("WORKOUT_FINISH", null, 0, 0L, 0, null, "2026-11-03", 1000L, action = null))
         assertNotNull(TGymBridge.parse("REST_START", true, 60, 0L, 60, "Bench", null, 0L, now = 1_000L, action = TGymBridge.ACTION))
     }
+
+    @Test
+    fun workoutOfflineFilterKeepsOnlyLocalAndDownloadedTracks() {
+        val list = listOf(
+            com.spotifree.app.data.model.Track(id = "local-1", title = "Local", artist = "A", localUri = "content://media/external/audio/1"),
+            com.spotifree.app.data.model.Track(id = "dl-1", title = "Downloaded", artist = "B", videoId = "v1"),
+            com.spotifree.app.data.model.Track(id = "online-1", title = "Online", artist = "C", videoId = "v2"),
+        )
+        val playable = com.spotifree.app.ui.workout.filterOfflinePlayableTracks(list, setOf("dl-1"))
+        assertEquals(listOf("local-1", "dl-1"), playable.map { it.id })
+    }
 }

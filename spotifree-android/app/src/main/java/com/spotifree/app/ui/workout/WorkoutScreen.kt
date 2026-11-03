@@ -70,6 +70,9 @@ import java.time.LocalDate
 
 data class RestState(val totalSec: Int = 0, val leftSec: Int = 0, val running: Boolean = false)
 
+internal fun filterOfflinePlayableTracks(tracks: List<Track>, downloadedIds: Set<String>): List<Track> =
+    tracks.filter { it.isLocal || it.id in downloadedIds }
+
 class WorkoutViewModel(private val graph: AppGraph) : ViewModel() {
     private val _rest = MutableStateFlow(RestState())
     val rest: StateFlow<RestState> = _rest
@@ -79,8 +82,13 @@ class WorkoutViewModel(private val graph: AppGraph) : ViewModel() {
 
     init {
         viewModelScope.launch {
-            _tracks.value = runCatchingCancellable { graph.music.searchSongs("gym workout motivation music 130 bpm", 30) }.getOrDefault(emptyList())
-                .filter { !graph.library.isBlocked(it) }
+            _tracks.value = if (graph.settings.current.offlineMode) {
+                filterOfflinePlayableTracks(graph.library.sampleTracks(30), graph.downloads.doneIds.value)
+            } else {
+                runCatchingCancellable { graph.music.searchSongs("gym workout motivation music 130 bpm", 30) }.getOrDefault(emptyList())
+                    .filter { !graph.library.isBlocked(it) }
+                    .ifEmpty { filterOfflinePlayableTracks(graph.library.sampleTracks(30), graph.downloads.doneIds.value) }
+            }
         }
     }
 

@@ -102,6 +102,10 @@ class AppActions(
 
     /** Searches [query] and plays the results (home shortcuts such as "Top hits" or "Latin hits"). */
     fun playQuery(query: String) = scope.launch {
+        if (graph.settings.current.offlineMode) {
+            graph.messages.post(s["offlineModeOn"], isError = true)
+            return@launch
+        }
         graph.messages.post(s.f("loadingQuery", query))
         val list = runCatchingCancellable { graph.music.searchSongs(query, 25) }.getOrDefault(emptyList())
             .filter { !graph.library.isBlocked(it) }
@@ -116,6 +120,10 @@ class AppActions(
         val url = Regex("""https?://\S+""").find(text)?.value ?: return false
         val vid = com.spotifree.app.data.remote.YouTubeIds.videoId(url)
         val list = com.spotifree.app.data.remote.YouTubeIds.playlistId(url)
+        if (graph.settings.current.offlineMode && (vid != null || list != null || url.contains("/channel/") || url.contains("/@"))) {
+            graph.messages.post(s["offlineModeOn"], isError = true)
+            return true
+        }
         when {
             vid != null -> scope.launch {
                 val t = runCatchingCancellable { graph.music.trackInfo(vid) }.getOrNull()
@@ -196,6 +204,10 @@ class AppActions(
 
     fun openAlbum(t: Track) = scope.launch {
         if (t.album.isBlank()) return@launch
+        if (graph.settings.current.offlineMode) {
+            graph.messages.post(s["offlineModeOn"], isError = true)
+            return@launch
+        }
         val res = runCatchingCancellable { graph.music.search("${t.album} ${t.artist}", com.spotifree.app.data.model.SearchFilter.ALBUMS) }.getOrNull()
         val album = res?.albums?.firstOrNull()
         if (album != null) openCollection(album.url, album.title) else graph.messages.post(s["albumNotFound"], isError = true)
