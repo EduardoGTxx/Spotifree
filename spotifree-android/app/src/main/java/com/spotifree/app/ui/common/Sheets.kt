@@ -16,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.PlaylistPlay
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Album
@@ -29,7 +30,6 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonOff
-import androidx.compose.material.icons.filled.PlaylistPlay
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.SaveAlt
@@ -113,7 +113,7 @@ fun TrackMenuSheet(track: Track, ctx: MenuContext, onDismiss: () -> Unit) {
                 tint = if (isLiked) c.accent else null) { act { actions.toggleLike(track) } }
             MenuItem(Icons.AutoMirrored.Filled.PlaylistAdd, t("addToPlaylist")) { act { actions.showAddToPlaylist(listOf(track)) } }
             if (ctx.queueIndex == null) {
-                MenuItem(Icons.Default.PlaylistPlay, t("playNext")) { act { actions.playNext(track) } }
+                MenuItem(Icons.AutoMirrored.Filled.PlaylistPlay, t("playNext")) { act { actions.playNext(track) } }
                 MenuItem(Icons.AutoMirrored.Filled.QueueMusic, t("addToQueueAction")) { act { actions.addToQueue(track) } }
             } else {
                 MenuItem(Icons.Default.RemoveCircleOutline, t("removeFromQueue")) { act { graph.player.removeQueueItem(ctx.queueIndex) } }

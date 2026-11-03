@@ -256,9 +256,9 @@ class BackupManager(
             else -> false
         }
         if (!due) return false
-        val uri = runCatchingCancellable { writeToDownloads(AUTO_BACKUP_FILE, export(account)) }.getOrNull() ?: return false
+        runCatchingCancellable { writeToDownloads(AUTO_BACKUP_FILE, export(account)) }.getOrNull() ?: return false
         settings.update { it.copy(lastAutoBackupAt = now) }
-        return uri != null
+        return true
     }
 
     companion object {
