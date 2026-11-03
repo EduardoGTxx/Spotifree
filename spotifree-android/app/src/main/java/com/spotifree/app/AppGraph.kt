@@ -50,7 +50,7 @@ class AppGraph(val context: Context) {
     val playbackEvents = com.spotifree.app.playback.PlaybackEvents()
 
     val jam = com.spotifree.app.data.jam.JamClient(http, scope) { settings.current.offlineMode }
-    val recognizer = com.spotifree.app.data.recognition.Recognizer(context, http)
+    val recognizer = com.spotifree.app.data.recognition.Recognizer(context, http) { settings.current.offlineMode }
     val updates = com.spotifree.app.data.update.UpdateChecker(context, http)
     val localMusic = com.spotifree.app.data.local.LocalMusicScanner(context, db)
     val artwork = com.spotifree.app.data.artwork.ArtworkResolver(

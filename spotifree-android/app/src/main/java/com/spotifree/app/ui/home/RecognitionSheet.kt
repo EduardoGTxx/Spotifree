@@ -95,6 +95,7 @@ fun RecognitionSheet(onDismiss: () -> Unit) {
                 error = when (e.code) {
                     "permission" -> strings["micPermissionDenied"]
                     "config" -> strings["recognitionNeedsKey"]
+                    "offline" -> strings["offlineModeOn"]
                     else -> e.message ?: "error"
                 }
                 phase = "error"

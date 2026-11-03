@@ -33,13 +33,23 @@ class RecognitionException(val code: String, message: String) : Exception(messag
  * "¿Qué suena?": records a short microphone clip and asks AudD or ACRCloud with the user's own key
  * (same providers and key formats as the previous app).
  */
-class Recognizer(private val context: Context, private val http: OkHttpClient) {
+class Recognizer(
+    private val context: Context,
+    private val http: OkHttpClient,
+    private val offlineMode: () -> Boolean = { false },
+) {
     private val json = Json { ignoreUnknownKeys = true }
 
     /** Records [durationMs] of audio (AAC in MP4). [onLevel] receives 0..1 for the animation. */
     suspend fun record(durationMs: Long = 8000, onLevel: (Float) -> Unit = {}): File = withContext(Dispatchers.IO) {
+        if (offlineMode()) throw RecognitionException("offline", "Offline mode is active")
         val file = File(context.cacheDir, "recognition.m4a")
-        val recorder = MediaRecorder(context)
+        val recorder = if (useContextMediaRecorder(android.os.Build.VERSION.SDK_INT)) {
+            MediaRecorder(context)
+        } else {
+            @Suppress("DEPRECATION")
+            MediaRecorder()
+        }
         try {
             recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
             recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
@@ -67,8 +77,13 @@ class Recognizer(private val context: Context, private val http: OkHttpClient) {
     }
 
     suspend fun identify(file: File, provider: String, apiKey: String): RecognizedSong? = withContext(Dispatchers.IO) {
+        if (offlineMode()) throw RecognitionException("offline", "Offline mode is active")
         if (apiKey.isBlank()) throw RecognitionException("config", "missing key")
         if (provider == "acrcloud") acr(file, apiKey) else audd(file, apiKey)
+    }
+
+    companion object {
+        internal fun useContextMediaRecorder(sdkInt: Int): Boolean = sdkInt >= android.os.Build.VERSION_CODES.S
     }
 
     private fun audd(file: File, key: String): RecognizedSong? {

@@ -264,4 +264,11 @@ class IntegrationLogicTest {
         assertEquals("offline", jam.state.value.error)
         assertEquals("idle", jam.state.value.status)
     }
+
+    @Test
+    fun recognizerSelectsCorrectMediaRecorderConstructorForSdk() {
+        assertFalse(com.spotifree.app.data.recognition.Recognizer.useContextMediaRecorder(29))
+        assertFalse(com.spotifree.app.data.recognition.Recognizer.useContextMediaRecorder(30))
+        assertTrue(com.spotifree.app.data.recognition.Recognizer.useContextMediaRecorder(31))
+    }
 }
