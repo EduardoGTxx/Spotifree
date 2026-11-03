@@ -98,11 +98,124 @@ import com.spotifree.app.util.runCatchingCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.random.Random
 
-private val PurpleTop = Color(0xFF6B3FA0)
-private val PurpleMid = Color(0xFF3B1E58)
-private val PurpleDeep = Color(0xFF1A0D2A)
-private val PurpleBottom = Color(0xFF0B0614)
+internal data class LyricsPalette(
+    val top: Color,
+    val mid: Color,
+    val deep: Color,
+    val bottom: Color,
+    val glow: Color,
+    val accentText: Color,
+)
+
+internal val LYRICS_PALETTES = listOf(
+    // 1. Violet / Royal Purple
+    LyricsPalette(
+        top = Color(0xFF6B3FA0),
+        mid = Color(0xFF3B1E58),
+        deep = Color(0xFF1A0D2A),
+        bottom = Color(0xFF0B0614),
+        glow = Color(0xFF8E4EC6),
+        accentText = Color(0xFFE0B0FF),
+    ),
+    // 2. Sapphire / Deep Ocean Blue
+    LyricsPalette(
+        top = Color(0xFF1E56A0),
+        mid = Color(0xFF102E5A),
+        deep = Color(0xFF08162C),
+        bottom = Color(0xFF040A14),
+        glow = Color(0xFF3B82F6),
+        accentText = Color(0xFFB3D4FF),
+    ),
+    // 3. Emerald / Forest Teal
+    LyricsPalette(
+        top = Color(0xFF16695B),
+        mid = Color(0xFF0B3B33),
+        deep = Color(0xFF051C18),
+        bottom = Color(0xFF020D0B),
+        glow = Color(0xFF10B981),
+        accentText = Color(0xFFA7F3D0),
+    ),
+    // 4. Crimson / Rose Pink
+    LyricsPalette(
+        top = Color(0xFF9E2A5B),
+        mid = Color(0xFF561533),
+        deep = Color(0xFF280918),
+        bottom = Color(0xFF12040B),
+        glow = Color(0xFFD8437E),
+        accentText = Color(0xFFFFB3D1),
+    ),
+    // 5. Sunset / Warm Amber Copper
+    LyricsPalette(
+        top = Color(0xFF9A4B1A),
+        mid = Color(0xFF54270C),
+        deep = Color(0xFF261105),
+        bottom = Color(0xFF120702),
+        glow = Color(0xFFF59E0B),
+        accentText = Color(0xFFFDE68A),
+    ),
+    // 6. Midnight / Arctic Cyan
+    LyricsPalette(
+        top = Color(0xFF16607A),
+        mid = Color(0xFF0B3444),
+        deep = Color(0xFF051921),
+        bottom = Color(0xFF020B10),
+        glow = Color(0xFF06B6D4),
+        accentText = Color(0xFFA5F3FC),
+    ),
+    // 7. Ruby / Wine Red
+    LyricsPalette(
+        top = Color(0xFF8F2436),
+        mid = Color(0xFF4D111C),
+        deep = Color(0xFF24070D),
+        bottom = Color(0xFF100306),
+        glow = Color(0xFFE11D48),
+        accentText = Color(0xFFFECDD3),
+    ),
+    // 8. Cobalt / Indigo Night
+    LyricsPalette(
+        top = Color(0xFF353899),
+        mid = Color(0xFF1D1F57),
+        deep = Color(0xFF0D0E2B),
+        bottom = Color(0xFF060614),
+        glow = Color(0xFF6366F1),
+        accentText = Color(0xFFC7D2FE),
+    ),
+    // 9. Jade / Moss Green
+    LyricsPalette(
+        top = Color(0xFF2B6E3F),
+        mid = Color(0xFF173D22),
+        deep = Color(0xFF0A1D10),
+        bottom = Color(0xFF040D07),
+        glow = Color(0xFF22C55E),
+        accentText = Color(0xFFBBF7D0),
+    ),
+    // 10. Magenta / Electric Plum
+    LyricsPalette(
+        top = Color(0xFF832B8C),
+        mid = Color(0xFF46164D),
+        deep = Color(0xFF210924),
+        bottom = Color(0xFF0F0411),
+        glow = Color(0xFFC026D3),
+        accentText = Color(0xFFF5D0FE),
+    ),
+)
+
+@Volatile
+private var lastLyricsPaletteIndex: Int = -1
+
+internal fun nextRandomLyricsPalette(): LyricsPalette {
+    val size = LYRICS_PALETTES.size
+    if (size <= 1) return LYRICS_PALETTES.first()
+    val prev = lastLyricsPaletteIndex
+    var next = Random.nextInt(size)
+    if (next == prev) {
+        next = (next + Random.nextInt(1, size)) % size
+    }
+    lastLyricsPaletteIndex = next
+    return LYRICS_PALETTES[next]
+}
 
 @Composable
 fun LyricsView(
@@ -117,8 +230,14 @@ fun LyricsView(
     val scope = rememberCoroutineScope()
     val c = LocalSpotifreeColors.current
     val artworkUrl = rememberTrackArtwork(track)
-    val coverColor by rememberCoverColor(artworkUrl, PurpleTop)
-    val topTint by animateColorAsState(lerp(PurpleTop, coverColor, 0.28f), tween(600), label = "lyrics_bg")
+    val palette = remember(track.id) { nextRandomLyricsPalette() }
+    val coverColor by rememberCoverColor(artworkUrl, palette.top)
+    val topTint by animateColorAsState(lerp(palette.top, coverColor, 0.22f), tween(600), label = "lyrics_top")
+    val midTint by animateColorAsState(palette.mid, tween(600), label = "lyrics_mid")
+    val deepTint by animateColorAsState(palette.deep, tween(600), label = "lyrics_deep")
+    val bottomTint by animateColorAsState(palette.bottom, tween(600), label = "lyrics_bottom")
+    val glowTint by animateColorAsState(palette.glow, tween(600), label = "lyrics_glow")
+    val accentTextTint by animateColorAsState(palette.accentText, tween(600), label = "lyrics_accent_text")
 
     var result by remember(track.id) { mutableStateOf<LyricsResult?>(null) }
     var reload by remember { mutableIntStateOf(0) }
@@ -152,9 +271,9 @@ fun LyricsView(
                 Brush.verticalGradient(
                     colors = listOf(
                         topTint,
-                        PurpleMid,
-                        PurpleDeep,
-                        PurpleBottom,
+                        midTint,
+                        deepTint,
+                        bottomTint,
                     ),
                 ),
             )
@@ -162,7 +281,7 @@ fun LyricsView(
                 drawRect(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFF8E4EC6).copy(alpha = 0.34f),
+                            glowTint.copy(alpha = 0.34f),
                             Color.Transparent,
                         ),
                         center = Offset(size.width * 0.45f, size.height * 0.36f),
@@ -387,6 +506,7 @@ fun LyricsView(
                         fontSize = settings.lyricsFontSize,
                         position = position,
                         active = activeIndex,
+                        accentTextColor = accentTextTint,
                     )
                 }
             }
@@ -510,6 +630,7 @@ private fun LyricsLines(
     fontSize: String,
     position: State<Long>,
     active: Int,
+    accentTextColor: Color,
 ) {
     val graph = LocalGraph.current
     val listState = rememberLazyListState()
@@ -638,7 +759,7 @@ private fun LyricsLines(
                     translation?.getOrNull(i)?.takeIf { it.isNotBlank() && it != line.text }?.let {
                         Text(
                             it,
-                            color = Color(0xFFE0B0FF).copy(alpha = if (isActive || !synced) 0.95f else targetAlpha * 0.85f),
+                            color = accentTextColor.copy(alpha = if (isActive || !synced) 0.95f else targetAlpha * 0.85f),
                             fontSize = size * 0.68f,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(top = 2.dp),

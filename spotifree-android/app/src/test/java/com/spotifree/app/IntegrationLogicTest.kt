@@ -224,4 +224,11 @@ class IntegrationLogicTest {
         assertTrue(words.zipWithNext().all { (a, b) -> b.timeSec > a.timeSec })
         assertTrue(words.last().timeSec < 14.0)
     }
+
+    @Test
+    fun randomLyricsPaletteNeverRepeatsBackToBack() {
+        val picks = (1..30).map { com.spotifree.app.ui.player.nextRandomLyricsPalette() }
+        assertTrue(picks.zipWithNext().all { (a, b) -> a != b })
+        assertTrue(picks.distinct().size >= 3)
+    }
 }
