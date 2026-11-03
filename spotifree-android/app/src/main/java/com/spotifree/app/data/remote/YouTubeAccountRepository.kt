@@ -45,6 +45,14 @@ class YouTubeAccountRepository(
     context: Context,
     private val http: OkHttpClient,
     private val music: MusicRepository,
+    private val clearWebCookies: () -> Unit = {
+        runCatchingCancellable {
+            android.webkit.CookieManager.getInstance().apply {
+                removeAllCookies(null)
+                flush()
+            }
+        }
+    },
 ) {
     private val prefs = context.getSharedPreferences("yt_account", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
@@ -61,7 +69,10 @@ class YouTubeAccountRepository(
         _account.value = account
     }
 
-    fun disconnect() = save(null)
+    fun disconnect() {
+        save(null)
+        clearWebCookies()
+    }
 
     /** Called by the sign-in screen once Google redirected to music.youtube.com with a session. */
     suspend fun completeSignIn(cookie: String): YouTubeAccount = withContext(Dispatchers.IO) {

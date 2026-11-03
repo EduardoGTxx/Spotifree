@@ -43,9 +43,16 @@ fun YouTubeSignInScreen(onBack: () -> Unit) {
     val appSettings by graph.settings.settings.collectAsStateWithLifecycle()
     var loading by remember { mutableStateOf(true) }
     var done by remember { mutableStateOf(false) }
+    var webView by remember { mutableStateOf<WebView?>(null) }
     val cookies = remember { CookieManager.getInstance() }
 
-    DisposableEffect(Unit) { onDispose { } }
+    DisposableEffect(Unit) {
+        onDispose {
+            webView?.stopLoading()
+            webView?.destroy()
+            webView = null
+        }
+    }
 
     Column(Modifier.fillMaxSize()) {
         DetailTopBar(t("connectGoogle"), onBack)
@@ -57,6 +64,7 @@ fun YouTubeSignInScreen(onBack: () -> Unit) {
         Box(Modifier.fillMaxSize()) {
             AndroidView(factory = { ctx ->
                 WebView(ctx).apply {
+                    webView = this
                     settings.blockNetworkLoads = appSettings.offlineMode
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
