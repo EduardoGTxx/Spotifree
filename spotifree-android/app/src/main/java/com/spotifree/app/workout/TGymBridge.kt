@@ -36,19 +36,23 @@ object TGymBridge {
         date: String?,
         durationMs: Long,
         now: Long = System.currentTimeMillis(),
-    ): TGymEvent? = when (type?.uppercase() ?: if (active == true) "REST_START" else if (active == false) "REST_END" else null) {
-        "REST_START" -> {
-            val sec = seconds.coerceAtLeast(0)
-            val end = if (endsAt > 0) endsAt else now + sec * 1000L
-            if (end <= now) TGymEvent.RestEnd
-            else TGymEvent.RestStart(end, sec, if (total > 0) total else sec, exerciseName.orEmpty())
+        action: String? = ACTION,
+    ): TGymEvent? {
+        if (action != ACTION) return null
+        return when (type?.uppercase() ?: if (active == true) "REST_START" else if (active == false) "REST_END" else null) {
+            "REST_START" -> {
+                val sec = seconds.coerceAtLeast(0)
+                val end = if (endsAt > 0) endsAt else now + sec * 1000L
+                if (end <= now) TGymEvent.RestEnd
+                else TGymEvent.RestStart(end, sec, if (total > 0) total else sec, exerciseName.orEmpty())
+            }
+            "REST_END" -> TGymEvent.RestEnd
+            "WORKOUT_FINISH" -> TGymEvent.WorkoutFinish(
+                date?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: LocalDate.now(),
+                durationMs.coerceAtLeast(0),
+            )
+            else -> null
         }
-        "REST_END" -> TGymEvent.RestEnd
-        "WORKOUT_FINISH" -> TGymEvent.WorkoutFinish(
-            date?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: LocalDate.now(),
-            durationMs.coerceAtLeast(0),
-        )
-        else -> null
     }
 
     fun parse(intent: Intent): TGymEvent? = parse(
@@ -60,6 +64,7 @@ object TGymBridge {
         exerciseName = intent.getStringExtra("exerciseName"),
         date = intent.getStringExtra("date"),
         durationMs = intent.getLongExtra("durationMs", 0L),
+        action = intent.action,
     )
 }
 

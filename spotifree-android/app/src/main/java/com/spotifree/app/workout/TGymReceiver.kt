@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
  */
 class TGymReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != TGymBridge.ACTION) return
         val graph = AppGraph.get(context)
         val s = graph.settings.current
         if (!s.enableTGym) return

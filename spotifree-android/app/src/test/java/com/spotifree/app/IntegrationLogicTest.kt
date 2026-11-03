@@ -14,6 +14,8 @@ import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -303,5 +305,20 @@ class IntegrationLogicTest {
         val json = com.spotifree.app.data.importer.BackupManager.settingsToJson(original)
         val restored = com.spotifree.app.data.importer.BackupManager.applyLegacySettings(com.spotifree.app.data.prefs.AppSettings(), json)
         assertEquals(original, restored)
+    }
+
+    @Test
+    fun youtubeAccountAuthorizationBuildsSapisidHashAndIgnoresEmptyCookies() {
+        assertNull(com.spotifree.app.data.remote.YouTubeAccountRepository.authorization(""))
+        val auth = com.spotifree.app.data.remote.YouTubeAccountRepository.authorization("LOGIN_INFO=1; SAPISID=abc123xyz")
+        assertNotNull(auth)
+        assertTrue(auth!!.startsWith("SAPISIDHASH "))
+    }
+
+    @Test
+    fun tgymBridgeRejectsMismatchedBroadcastAction() {
+        assertNull(TGymBridge.parse("REST_START", true, 60, 0L, 60, "Bench", null, 0L, now = 1_000L, action = "android.intent.action.MAIN"))
+        assertNull(TGymBridge.parse("WORKOUT_FINISH", null, 0, 0L, 0, null, "2026-11-03", 1000L, action = null))
+        assertNotNull(TGymBridge.parse("REST_START", true, 60, 0L, 60, "Bench", null, 0L, now = 1_000L, action = TGymBridge.ACTION))
     }
 }
