@@ -49,7 +49,11 @@ sealed interface JamEvent {
  * "Escuchar juntos" over the user's own relay server (jam-server). Same JSON protocol as the
  * previous app: the host broadcasts its playback, guests follow it and can suggest songs.
  */
-class JamClient(http: OkHttpClient, private val scope: CoroutineScope) {
+class JamClient(
+    http: OkHttpClient,
+    private val scope: CoroutineScope,
+    private val offlineMode: () -> Boolean = { false },
+) {
     private val json = Json { ignoreUnknownKeys = true }
     // WebSocket pings detect a dead connection (phone lost signal) within ~20 s
     private val http = http.newBuilder().pingInterval(20, java.util.concurrent.TimeUnit.SECONDS).build()
@@ -114,17 +118,25 @@ class JamClient(http: OkHttpClient, private val scope: CoroutineScope) {
     private fun closeSocket() {
         heartbeat?.cancel()
         socket?.let {
-            runCatchingCancellable { it.send("""{"type":"leave"}""") }
-            it.close(1000, "leave")
+            if (offlineMode()) {
+                it.cancel()
+            } else {
+                runCatchingCancellable { it.send("""{"type":"leave"}""") }
+                it.close(1000, "leave")
+            }
         }
         socket = null
     }
 
     private fun send(text: String) {
-        socket?.send(text)
+        if (!offlineMode()) socket?.send(text)
     }
 
     private fun connect(serverUrl: String, onOpen: () -> Unit) {
+        if (offlineMode()) {
+            _state.value = JamState(error = "offline")
+            return
+        }
         if (!serverUrl.startsWith("ws://") && !serverUrl.startsWith("wss://")) {
             _state.value = JamState(error = "config")
             return
@@ -203,7 +215,7 @@ class JamClient(http: OkHttpClient, private val scope: CoroutineScope) {
     private fun scheduleReconnect(): Boolean {
         val server = lastServer
         val room = lastRoom
-        if (userLeft || server == null || room == null || _state.value.status == "host" || reconnectAttempt >= MAX_RECONNECTS) {
+        if (userLeft || offlineMode() || server == null || room == null || _state.value.status == "host" || reconnectAttempt >= MAX_RECONNECTS) {
             reconnectAttempt = 0
             return false
         }

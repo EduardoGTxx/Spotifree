@@ -255,4 +255,13 @@ class IntegrationLogicTest {
         assertEquals(coil3.request.CachePolicy.DISABLED, com.spotifree.app.widget.WidgetUpdater.networkPolicy(true, "https://i.ytimg.com/vi/abc/hqdefault.jpg"))
         assertEquals(coil3.request.CachePolicy.ENABLED, com.spotifree.app.widget.WidgetUpdater.networkPolicy(false, "https://i.ytimg.com/vi/abc/hqdefault.jpg"))
     }
+
+    @Test
+    fun jamClientBlocksConnectAndSendInOfflineMode() {
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob())
+        val jam = com.spotifree.app.data.jam.JamClient(AppGraph.buildHttpClient { true }, scope) { true }
+        jam.create("wss://example.com/jam", "Host")
+        assertEquals("offline", jam.state.value.error)
+        assertEquals("idle", jam.state.value.status)
+    }
 }

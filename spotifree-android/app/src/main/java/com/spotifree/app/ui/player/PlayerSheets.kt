@@ -347,22 +347,24 @@ fun DevicesSheet(onDismiss: () -> Unit) {
                     Text(if (player.isCasting) t("castingNow") else t("listeningHere"), style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
                 }
             }
-            Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(c.surface).padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text("Chromecast / Google TV", fontWeight = FontWeight.SemiBold)
-                    Text(t("castHint"), style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
+            if (!settings.offlineMode) {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(c.surface).padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Chromecast / Google TV", fontWeight = FontWeight.SemiBold)
+                        Text(t("castHint"), style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
+                    }
+                    AndroidView(
+                        factory = { ctx ->
+                            MediaRouteButton(ctx).also { runCatchingCancellable { CastButtonFactory.setUpMediaRouteButton(ctx.applicationContext, it) } }
+                        },
+                        modifier = Modifier.size(48.dp),
+                    )
                 }
-                AndroidView(
-                    factory = { ctx ->
-                        MediaRouteButton(ctx).also { runCatchingCancellable { CastButtonFactory.setUpMediaRouteButton(ctx.applicationContext, it) } }
-                    },
-                    modifier = Modifier.size(48.dp),
-                )
+                Spacer(Modifier.height(8.dp))
             }
-            Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = {
                 runCatchingCancellable { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             }, modifier = Modifier.fillMaxWidth()) {
@@ -379,6 +381,7 @@ fun DevicesSheet(onDismiss: () -> Unit) {
             }
             Text(t("jamDesc"), style = MaterialTheme.typography.bodySmall, color = c.textSecondary, modifier = Modifier.padding(vertical = 6.dp))
             when {
+                settings.offlineMode -> Text(t("offlineModeOn"), color = c.textSecondary, style = MaterialTheme.typography.bodyMedium)
                 settings.jamServerUrl.isBlank() -> Text(t("jamNeedsServer"), color = c.textSecondary, style = MaterialTheme.typography.bodyMedium)
                 jam.status == "host" || jam.status == "guest" -> {
                     Text(t("jamRoomCode", jam.room.orEmpty()), style = MaterialTheme.typography.headlineSmall, color = c.accent)
