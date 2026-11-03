@@ -110,35 +110,7 @@ class BackupManager(
                     })
                 }
             }
-            putJsonObject("settings") {
-                put("language", s.language)
-                put("enableTGymIntegration", s.enableTGym)
-                put("tgymLiveSync", s.tgymLiveSync)
-                put("tgymDuckingLevel", s.tgymDuckingLevel)
-                put("workoutRestDuration", s.workoutRestSec)
-                put("audioDownloadQuality", s.audioQuality)
-                put("downloadOnlyWifi", s.downloadOnlyWifi)
-                put("autoCacheOnPlay", s.autoCacheOnPlay)
-                put("crossfadeDuration", s.crossfadeSec)
-                put("volumeNormalization", s.volumeNormalization)
-                put("autoplayRadio", s.autoplayRadio)
-                put("equalizerPreset", s.equalizerPreset)
-                putJsonArray("equalizerBands") { s.equalizerBands.forEach { add(JsonPrimitive(it)) } }
-                put("skipSilence", s.skipSilence)
-                put("autoDownloadLiked", s.autoDownloadLiked)
-                put("lruCacheSizeMB", s.cacheSizeMb)
-                put("autoPauseOnNoisy", s.autoPauseOnNoisy)
-                put("autoResumeOnBluetooth", s.autoResumeOnBluetooth)
-                put("autoBackupFrequency", s.autoBackupFrequency)
-                put("smartPrefetch", s.smartPrefetch)
-                put("lyricsFontSize", s.lyricsFontSize)
-                put("lyricsKaraoke", s.lyricsKaraoke)
-                put("lyricsRomanization", s.lyricsRomanization)
-                put("accentColor", s.accentColor)
-                put("amoledTheme", s.amoledTheme)
-                putJsonArray("blockedArtists") { blockedArtists.forEach { add(JsonPrimitive(it.key)) } }
-                putJsonArray("blockedTrackIds") { blockedTrackIds.forEach { add(JsonPrimitive(it)) } }
-            }
+            put("settings", settingsToJson(s, blockedArtists.map { it.key }, blockedTrackIds))
         }.toString()
     }
 
@@ -226,42 +198,6 @@ class BackupManager(
         RestoreSummary(tracks.size, playlists.size, liked.size, (root["followedArtists"] as? JsonArray)?.size ?: 0)
     }
 
-    private fun applyLegacySettings(s: AppSettings, o: JsonObject): AppSettings = s.copy(
-        language = o.s("language")?.takeIf { it in listOf("es", "en", "pt", "fr") } ?: s.language,
-        enableTGym = o.b("enableTGymIntegration") ?: s.enableTGym,
-        tgymLiveSync = o.b("tgymLiveSync") ?: s.tgymLiveSync,
-        tgymDuckingLevel = o.f("tgymDuckingLevel") ?: s.tgymDuckingLevel,
-        workoutRestSec = o.i("workoutRestDuration") ?: s.workoutRestSec,
-        audioQuality = o.s("audioDownloadQuality")?.takeIf { it in listOf("saving", "normal", "high") } ?: s.audioQuality,
-        downloadOnlyWifi = o.b("downloadOnlyWifi") ?: s.downloadOnlyWifi,
-        autoCacheOnPlay = o.b("autoCacheOnPlay") ?: s.autoCacheOnPlay,
-        crossfadeSec = o.i("crossfadeDuration") ?: s.crossfadeSec,
-        volumeNormalization = o.b("volumeNormalization") ?: s.volumeNormalization,
-        autoplayRadio = o.b("autoplayRadio") ?: s.autoplayRadio,
-        equalizerPreset = o.s("equalizerPreset") ?: s.equalizerPreset,
-        equalizerBands = (o["equalizerBands"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.doubleOrNull?.toInt() }?.takeIf { it.size == 5 } ?: s.equalizerBands,
-        skipSilence = o.b("skipSilence") ?: s.skipSilence,
-        autoDownloadLiked = o.b("autoDownloadLiked") ?: s.autoDownloadLiked,
-        cacheSizeMb = o.i("lruCacheSizeMB") ?: s.cacheSizeMb,
-        autoPauseOnNoisy = o.b("autoPauseOnNoisy") ?: s.autoPauseOnNoisy,
-        autoResumeOnBluetooth = o.b("autoResumeOnBluetooth") ?: s.autoResumeOnBluetooth,
-        autoBackupFrequency = o.s("autoBackupFrequency") ?: s.autoBackupFrequency,
-        smartPrefetch = o.b("smartPrefetch") ?: s.smartPrefetch,
-        lyricsFontSize = o.s("lyricsFontSize") ?: s.lyricsFontSize,
-        lyricsKaraoke = o.b("lyricsKaraoke") ?: s.lyricsKaraoke,
-        lyricsRomanization = o.b("lyricsRomanization") ?: s.lyricsRomanization,
-        accentColor = o.s("accentColor")?.takeIf { it.startsWith("#") } ?: s.accentColor,
-        amoledTheme = o.b("amoledTheme") ?: s.amoledTheme,
-        offlineMode = o.b("isOfflineMode") ?: s.offlineMode,
-        recognitionProvider = o.s("recognitionProvider") ?: s.recognitionProvider,
-        recognitionApiKey = o.s("recognitionApiKey") ?: s.recognitionApiKey,
-        jamServerUrl = o.s("jamServerUrl") ?: s.jamServerUrl,
-        castReceiverAppId = o.s("castReceiverAppId") ?: s.castReceiverAppId,
-        driveAutoBackup = o.b("driveAutoBackup") ?: s.driveAutoBackup,
-        workoutStreakDays = o.i("workoutStreakDays") ?: s.workoutStreakDays,
-        lastWorkoutDate = o.s("lastWorkoutDate") ?: s.lastWorkoutDate,
-    )
-
     private fun trackFrom(o: JsonObject): Track? {
         val id = o.s("id") ?: return null
         if (o.b("isLocal") == true || o.b("isLocalDevice") == true || id.startsWith("local")) return null
@@ -327,6 +263,90 @@ class BackupManager(
 
     companion object {
         const val AUTO_BACKUP_FILE = "Spotifree_AutoBackup.json"
+
+        internal fun settingsToJson(
+            s: AppSettings,
+            blockedArtists: List<String> = emptyList(),
+            blockedTrackIds: List<String> = emptyList(),
+        ): JsonObject = buildJsonObject {
+            put("language", s.language)
+            put("enableTGymIntegration", s.enableTGym)
+            put("tgymLiveSync", s.tgymLiveSync)
+            put("tgymDuckingLevel", s.tgymDuckingLevel)
+            put("workoutRestDuration", s.workoutRestSec)
+            put("audioDownloadQuality", s.audioQuality)
+            put("downloadOnlyWifi", s.downloadOnlyWifi)
+            put("autoCacheOnPlay", s.autoCacheOnPlay)
+            put("crossfadeDuration", s.crossfadeSec)
+            put("volumeNormalization", s.volumeNormalization)
+            put("autoplayRadio", s.autoplayRadio)
+            put("equalizerPreset", s.equalizerPreset)
+            putJsonArray("equalizerBands") { s.equalizerBands.forEach { add(JsonPrimitive(it)) } }
+            put("skipSilence", s.skipSilence)
+            put("autoDownloadLiked", s.autoDownloadLiked)
+            put("lruCacheSizeMB", s.cacheSizeMb)
+            put("autoPauseOnNoisy", s.autoPauseOnNoisy)
+            put("autoResumeOnBluetooth", s.autoResumeOnBluetooth)
+            put("autoBackupFrequency", s.autoBackupFrequency)
+            put("smartPrefetch", s.smartPrefetch)
+            put("lyricsFontSize", s.lyricsFontSize)
+            put("lyricsKaraoke", s.lyricsKaraoke)
+            put("lyricsRomanization", s.lyricsRomanization)
+            put("accentColor", s.accentColor)
+            put("amoledTheme", s.amoledTheme)
+            put("isOfflineMode", s.offlineMode)
+            put("recognitionProvider", s.recognitionProvider)
+            put("recognitionApiKey", s.recognitionApiKey)
+            put("jamServerUrl", s.jamServerUrl)
+            put("castReceiverAppId", s.castReceiverAppId)
+            put("driveAutoBackup", s.driveAutoBackup)
+            put("workoutStreakDays", s.workoutStreakDays)
+            s.lastWorkoutDate?.let { put("lastWorkoutDate", it) }
+            put("playbackSpeed", s.playbackSpeed)
+            put("preservePitch", s.preservePitch)
+            put("effectPreset", s.effectPreset)
+            putJsonArray("blockedArtists") { blockedArtists.forEach { add(JsonPrimitive(it)) } }
+            putJsonArray("blockedTrackIds") { blockedTrackIds.forEach { add(JsonPrimitive(it)) } }
+        }
+
+        internal fun applyLegacySettings(s: AppSettings, o: JsonObject): AppSettings = s.copy(
+            language = o.s("language")?.takeIf { it in listOf("es", "en", "pt", "fr") } ?: s.language,
+            enableTGym = o.b("enableTGymIntegration") ?: s.enableTGym,
+            tgymLiveSync = o.b("tgymLiveSync") ?: s.tgymLiveSync,
+            tgymDuckingLevel = o.f("tgymDuckingLevel") ?: s.tgymDuckingLevel,
+            workoutRestSec = o.i("workoutRestDuration") ?: s.workoutRestSec,
+            audioQuality = o.s("audioDownloadQuality")?.takeIf { it in listOf("saving", "normal", "high") } ?: s.audioQuality,
+            downloadOnlyWifi = o.b("downloadOnlyWifi") ?: s.downloadOnlyWifi,
+            autoCacheOnPlay = o.b("autoCacheOnPlay") ?: s.autoCacheOnPlay,
+            crossfadeSec = o.i("crossfadeDuration") ?: s.crossfadeSec,
+            volumeNormalization = o.b("volumeNormalization") ?: s.volumeNormalization,
+            autoplayRadio = o.b("autoplayRadio") ?: s.autoplayRadio,
+            equalizerPreset = o.s("equalizerPreset") ?: s.equalizerPreset,
+            equalizerBands = (o["equalizerBands"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.doubleOrNull?.toInt() }?.takeIf { it.size == 5 } ?: s.equalizerBands,
+            skipSilence = o.b("skipSilence") ?: s.skipSilence,
+            autoDownloadLiked = o.b("autoDownloadLiked") ?: s.autoDownloadLiked,
+            cacheSizeMb = o.i("lruCacheSizeMB") ?: s.cacheSizeMb,
+            autoPauseOnNoisy = o.b("autoPauseOnNoisy") ?: s.autoPauseOnNoisy,
+            autoResumeOnBluetooth = o.b("autoResumeOnBluetooth") ?: s.autoResumeOnBluetooth,
+            autoBackupFrequency = o.s("autoBackupFrequency") ?: s.autoBackupFrequency,
+            smartPrefetch = o.b("smartPrefetch") ?: s.smartPrefetch,
+            lyricsFontSize = o.s("lyricsFontSize") ?: s.lyricsFontSize,
+            lyricsKaraoke = o.b("lyricsKaraoke") ?: s.lyricsKaraoke,
+            lyricsRomanization = o.b("lyricsRomanization") ?: s.lyricsRomanization,
+            accentColor = o.s("accentColor")?.takeIf { it.startsWith("#") } ?: s.accentColor,
+            amoledTheme = o.b("amoledTheme") ?: s.amoledTheme,
+            offlineMode = o.b("isOfflineMode") ?: s.offlineMode,
+            recognitionProvider = o.s("recognitionProvider") ?: s.recognitionProvider,
+            recognitionApiKey = o.s("recognitionApiKey") ?: s.recognitionApiKey,
+            jamServerUrl = o.s("jamServerUrl") ?: s.jamServerUrl,
+            castReceiverAppId = o.s("castReceiverAppId") ?: s.castReceiverAppId,
+            driveAutoBackup = o.b("driveAutoBackup") ?: s.driveAutoBackup,
+            workoutStreakDays = o.i("workoutStreakDays") ?: s.workoutStreakDays,
+            lastWorkoutDate = o.s("lastWorkoutDate") ?: s.lastWorkoutDate,
+            playbackSpeed = o.f("playbackSpeed")?.coerceIn(0.5f, 2f) ?: s.playbackSpeed,
+            preservePitch = o.b("preservePitch") ?: s.preservePitch,
+            effectPreset = o.s("effectPreset") ?: s.effectPreset,
+        )
 
         private fun JsonObject.p(k: String): JsonPrimitive? = this[k] as? JsonPrimitive
         fun JsonObject.s(k: String): String? = p(k)?.takeIf { it.isString || it.contentOrNull != null }?.contentOrNull?.takeIf { it != "null" }

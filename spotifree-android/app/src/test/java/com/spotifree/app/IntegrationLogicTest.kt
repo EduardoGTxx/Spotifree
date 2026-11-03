@@ -283,4 +283,25 @@ class IntegrationLogicTest {
         assertFalse(com.spotifree.app.playback.BluetoothResumeReceiver.shouldResume(a2dp, android.bluetooth.BluetoothProfile.STATE_CONNECTING))
         assertFalse(com.spotifree.app.playback.BluetoothResumeReceiver.shouldResume("android.intent.action.VIEW", android.bluetooth.BluetoothProfile.STATE_CONNECTED))
     }
+
+    @Test
+    fun backupSettingsRoundTripPreservesAllUserSettings() {
+        val original = com.spotifree.app.data.prefs.AppSettings(
+            language = "en",
+            offlineMode = true,
+            recognitionProvider = "acrcloud",
+            recognitionApiKey = "host|key|secret",
+            jamServerUrl = "wss://jam.example/ws",
+            castReceiverAppId = "ABCD1234",
+            driveAutoBackup = true,
+            workoutStreakDays = 7,
+            lastWorkoutDate = "2026-11-03",
+            playbackSpeed = 1.25f,
+            preservePitch = false,
+            effectPreset = "nightcore",
+        )
+        val json = com.spotifree.app.data.importer.BackupManager.settingsToJson(original)
+        val restored = com.spotifree.app.data.importer.BackupManager.applyLegacySettings(com.spotifree.app.data.prefs.AppSettings(), json)
+        assertEquals(original, restored)
+    }
 }
