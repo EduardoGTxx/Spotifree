@@ -23,3 +23,5 @@ keystore.properties
 
 # Herramientas locales de compilación
 _audit/
+graphify-out/
+_claude_tmp/
