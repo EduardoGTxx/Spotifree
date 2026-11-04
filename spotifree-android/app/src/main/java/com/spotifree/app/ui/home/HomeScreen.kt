@@ -81,7 +81,6 @@ import com.spotifree.app.ui.MenuContext
 import com.spotifree.app.ui.PlaylistRoute
 import com.spotifree.app.ui.SettingsRoute
 import com.spotifree.app.ui.StatsRoute
-import com.spotifree.app.ui.WorkoutRoute
 import com.spotifree.app.ui.common.Artwork
 import com.spotifree.app.ui.common.EmptyState
 import com.spotifree.app.ui.common.SectionTitle
@@ -146,8 +145,7 @@ class HomeViewModel(private val graph: AppGraph) : ViewModel() {
                 .filter { !graph.library.isBlocked(it) }
         }
         val gym = async {
-            if (!graph.settings.current.enableTGym) emptyList()
-            else runCatchingCancellable { graph.music.searchSongs("gym workout motivation mix", 20) }.getOrDefault(emptyList())
+            runCatchingCancellable { graph.music.searchSongs("gym workout motivation mix", 20) }.getOrDefault(emptyList())
                 .filter { !graph.library.isBlocked(it) }
         }
         _feed.value = HomeFeed(rec.await(), pop.await(), seed?.title, gym.await(), loading = false)
@@ -194,8 +192,7 @@ fun HomeScreen() {
     val player by graph.player.state.collectAsStateWithLifecycle()
     var recognizing by remember { mutableStateOf(false) }
     var filter by rememberSaveable { mutableStateOf(HomeFilter.ALL) }
-    if (filter == HomeFilter.WORKOUT && !settings.enableTGym) filter = HomeFilter.ALL
-
+    
     val greeting = when (LocalTime.now().hour) {
         in 5..11 -> t("greetingMorning")
         in 12..19 -> t("greetingAfternoon")
@@ -236,7 +233,6 @@ fun HomeScreen() {
                         add(HomeFilter.ALL to t("filterAll"))
                         add(HomeFilter.MUSIC to t("homeMusic"))
                         add(HomeFilter.FOR_YOU to t("homeForYou"))
-                        if (settings.enableTGym) add(HomeFilter.WORKOUT to t("homeWorkout"))
                     }
                     PillRow(chips, filter, PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp)) { filter = it }
                 }
@@ -253,9 +249,6 @@ fun HomeScreen() {
                         add(Tile(t("shortcutTopHits"), null, listOf(Color(0xFFF5576C), Color(0xFFF093FB)), Icons.Default.Whatshot) {
                             actions.playQuery(vm.popularQuery(settings.language))
                         })
-                        if (settings.enableTGym) add(Tile(t("shortcutGym"), null, listOf(c.accent, Color(0xFF1A1A2E)), Icons.Default.FitnessCenter) {
-                            actions.nav.navigate(WorkoutRoute)
-                        })
                         SHORTCUTS.forEach { sc -> add(Tile(strings[sc.labelKey], null, sc.colors, sc.icon) { actions.playQuery(sc.query(year)) }) }
                     }.let { all -> all.take(minOf(8, all.size - all.size % 2)) }
                     Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -265,22 +258,6 @@ fun HomeScreen() {
                                 if (row.size == 1) Spacer(Modifier.weight(1f))
                             }
                         }
-                    }
-                }
-                if (workout && settings.enableTGym) item {
-                    Row(
-                        Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                            .background(Brush.horizontalGradient(listOf(c.accent.copy(alpha = 0.7f), c.elevated)))
-                            .clickable { actions.nav.navigate(WorkoutRoute) }.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(Icons.Default.FitnessCenter, null, modifier = Modifier.size(36.dp))
-                        Spacer(Modifier.width(14.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(t("workoutCompanion"), fontWeight = FontWeight.ExtraBold)
-                            Text(t("workoutCompanionDesc"), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.85f))
-                        }
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                     }
                 }
                 if (workout && feed.workout.isNotEmpty()) item {

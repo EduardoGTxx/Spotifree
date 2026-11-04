@@ -16,7 +16,6 @@ import kotlinx.serialization.Serializable
 @Serializable object HomeRoute
 @Serializable object SearchRoute
 @Serializable object LibraryRoute
-@Serializable object WorkoutRoute
 @Serializable object SettingsRoute
 @Serializable object StatsRoute
 @Serializable object RewindRoute

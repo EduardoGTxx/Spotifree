@@ -92,7 +92,7 @@ Spotifree es un reproductor de música libre para Android 10+ (minSdk 29, target
 reproduce y descarga música de YouTube Music sin anuncios ni cuenta obligatoria, con letras
 sincronizadas, biblioteca local, importación desde Spotify/CSV/YouTube, copias de seguridad,
 "Escuchar juntos" (Jam), Chromecast, Android Auto, widget, estadísticas, Rewind anual en formato
-de historias e integración opcional con la app de gimnasio TGym. Desde la 2.0 es nativa en Kotlin
+de historias Desde la 2.0 es nativa en Kotlin
 (reemplazó a una app React + Capacitor; migra sus datos automáticamente al instalarse encima).
 
 Stack validado:
@@ -154,7 +154,7 @@ data/
 playback/
   PlaybackService.kt   MediaLibraryService: ExoPlayer, sesión, notificación con "me gusta",
                        cola persistente, radio automática, prefetch, historial, temporizador,
-                       crossfade por volumen, ducking de TGym, efectos, Cast, errores y reintentos.
+                       crossfade por volumen, efectos, Cast, errores y reintentos.
   PlayerConnection.kt  MediaController de la UI: PlayerUiState + position (StateFlow) y comandos.
   TrackResolver.kt / SwitchingDataSource.kt / Network.kt  DataSource que resuelve la URL al
                        reproducir, con caché de disco (400 MB) y archivos descargados.
@@ -164,11 +164,8 @@ playback/
   BrowseTree.kt        Árbol para Android Auto / navegadores multimedia.
   CastSupport.kt / CastOptionsProvider.kt  Chromecast.
   PlaybackCommands.kt  Comandos de sesión: sf.like, sf.sleep, sf.radio, sf.duck, sf.settings.
-  PlaybackEvents.kt    Eventos en memoria: duck, restEndsAt, chime (TGym).
   BluetoothResumeReceiver.kt  Reanudar al conectar Bluetooth (opcional).
 workout/
-  TGymBridge.kt        Contrato con TGym (broadcast) + WorkoutStreak (racha de días).
-  TGymReceiver.kt      Receptor exportado de com.spotifree.app.action.TGYM_REST.
 ui/
   MainScreen.kt        Scaffold, barra inferior compacta, NavHost, mini reproductor, overlay del
                        reproductor, mensajes, Jam, intents. Rewind oculta la barra (pantalla completa).
@@ -208,10 +205,8 @@ automática, saltar silencios, velocidad/tono, estilo de efecto, EQ (5 bandas), 
 auriculares, reanudar por Bluetooth, precarga, calidad, descargas solo Wi-Fi, caché automática,
 descargar Me gusta, tamaño de caché, modo sin conexión, letras (tamaño, karaoke, romanización),
 backups (frecuencia, Drive), reconocimiento (proveedor, clave), servidor Jam, receptor Cast,
-TGym (activado, sincronización en vivo, nivel de ducking, descanso, racha), migración hecha.
+migración hecha.
 
-Contrato TGym → Spotifree (broadcast explícito al paquete com.spotifree.app):
-- acción `com.spotifree.app.action.TGYM_REST`, extra `type`:
   - `REST_START`: seconds (Int), endsAt (Long, epoch ms), total (Int), exerciseName (String)
     → baja el volumen al nivel de ducking hasta endsAt (+1,5 s de margen) y suena un aviso.
   - `REST_END` → restaura el volumen.
@@ -260,7 +255,6 @@ con secretos de GitHub.
 - StreamResolver: cancelar la resolución de NewPipe al saltar rápido de canción.
 - Pruebas instrumentadas de Compose para LyricsView (hoy la lógica está cubierta con JUnit).
 - Rewind: imagen del artista por API; más estadísticas (géneros, días seguidos).
-- TGym: TGym aún necesita enviar el broadcast nativo (ver docs/INTEGRACIONES.md).
 
 ## 7. Compilar, probar y publicar
 - Requisitos: JDK 21, Android SDK 36. `cd spotifree-android && ./gradlew testDebugUnitTest

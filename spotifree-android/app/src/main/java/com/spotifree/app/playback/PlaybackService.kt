@@ -82,8 +82,7 @@ class PlaybackService : MediaLibraryService() {
     private var sleepEndsAt = 0L
     private var sleepJob: Job? = null
 
-    // Volume shaping (crossfade-style fades + TGym ducking)
-    private var ducked = false
+    // Volume shaping
     private var volumeJob: Job? = null
 
     private var saveQueueJob: Job? = null
@@ -145,23 +144,6 @@ class PlaybackService : MediaLibraryService() {
                 .distinctUntilChanged()
                 .collectLatest { liked -> updateLikeButton(liked) }
         }
-        scope.launch {
-            graph.playbackEvents.duck.collectLatest { on -> setDucked(on) }
-        }
-        // TGym rest: restore the volume when its end time passes even if REST_END never arrives
-        scope.launch {
-            val events = graph.playbackEvents
-            events.restEndsAt.collectLatest { endsAt ->
-                if (endsAt <= 0L) return@collectLatest
-                delay((endsAt - System.currentTimeMillis()).coerceAtLeast(0L) + 1_500L)
-                if (events.restEndsAt.value == endsAt && events.duck.value) {
-                    events.restEndsAt.value = 0L
-                    events.duck.value = false
-                    events.chime.tryEmit(Unit)
-                }
-            }
-        }
-        scope.launch { graph.playbackEvents.chime.collect { playChime() } }
         startVolumeLoop()
     }
 
@@ -523,29 +505,11 @@ class PlaybackService : MediaLibraryService() {
 
     // ------------------------------------------------------------------ volume shaping
 
-    private fun setDucked(on: Boolean) {
-        ducked = on
-    }
-
-    /** Two short tones: "rest is over". */
-    private suspend fun playChime() {
-        val tone = runCatchingCancellable { android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 80) }.getOrNull() ?: return
-        try {
-            tone.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 150)
-            delay(250)
-            tone.startTone(android.media.ToneGenerator.TONE_PROP_BEEP2, 300)
-            delay(400)
-        } finally {
-            tone.release()
-        }
-    }
-
     private fun startVolumeLoop() {
         volumeJob?.cancel()
         volumeJob = scope.launch {
             while (isActive) {
                 val s = graph.settings.current
-                val duck = if (ducked) s.tgymDuckingLevel.coerceIn(0f, 1f) else 1f
                 var fade = 1f
                 val fadeMs = s.crossfadeSec * 1000L
                 if (fadeMs > 0 && player.isPlaying) {
@@ -557,10 +521,10 @@ class PlaybackService : MediaLibraryService() {
                     }
                 }
                 if (sleepJob?.isActive != true || sleepEndsAt - System.currentTimeMillis() > 4000) {
-                    val target = duck * fade
+                    val target = fade
                     if (kotlin.math.abs(player.volume - target) > 0.01f) player.volume = target
                 }
-                delay(if (fadeMs > 0 || ducked) 100 else 500)
+                delay(if (fadeMs > 0) 100 else 500)
             }
         }
     }
@@ -622,7 +586,6 @@ class PlaybackService : MediaLibraryService() {
                         maybeQueueRadio(force = true, seedTrackId = trackId)
                     }
                 }
-                PlaybackCommands.DUCK -> setDucked(args.getBoolean(PlaybackCommands.ARG_ON))
                 PlaybackCommands.APPLY_SETTINGS -> applySettings(graph.settings.current)
             }
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))

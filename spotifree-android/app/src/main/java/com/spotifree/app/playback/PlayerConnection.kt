@@ -335,9 +335,6 @@ class PlayerConnection(private val context: Context, private val scope: Coroutin
         )
     }
 
-    fun setDucked(on: Boolean) = withController {
-        it.sendCustomCommand(SessionCommand(PlaybackCommands.DUCK, Bundle.EMPTY), Bundle().apply { putBoolean(PlaybackCommands.ARG_ON, on) })
-    }
 
     private companion object {
         const val TAG = "PlayerConnection"

@@ -37,11 +37,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LibraryMusic
 import androidx.compose.material.icons.outlined.Search
@@ -104,7 +102,6 @@ import com.spotifree.app.ui.settings.UpdateDialog
 import com.spotifree.app.ui.stats.RewindScreen
 import com.spotifree.app.ui.stats.StatsScreen
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
-import com.spotifree.app.ui.workout.WorkoutScreen
 import kotlinx.coroutines.launch
 
 private data class Tab(val route: Any, val label: String, val icon: ImageVector, val selectedIcon: ImageVector)
@@ -221,7 +218,6 @@ fun MainScreen(activity: MainActivity) {
         add(Tab(HomeRoute, t("navHome"), Icons.Outlined.Home, Icons.Filled.Home))
         add(Tab(SearchRoute, t("navSearch"), Icons.Outlined.Search, Icons.Filled.Search))
         add(Tab(LibraryRoute, t("navLibrary"), Icons.Outlined.LibraryMusic, Icons.Filled.LibraryMusic))
-        if (settings.enableTGym) add(Tab(WorkoutRoute, t("navWorkout"), Icons.Outlined.FitnessCenter, Icons.Filled.FitnessCenter))
     }
     val backStack by nav.currentBackStackEntryAsState()
     val destination = backStack?.destination
@@ -251,7 +247,6 @@ fun MainScreen(activity: MainActivity) {
                     composable<HomeRoute> { HomeScreen() }
                     composable<SearchRoute> { Inset { SearchScreen() } }
                     composable<LibraryRoute> { Inset { LibraryScreen() } }
-                    composable<WorkoutRoute> { Inset { WorkoutScreen() } }
                     composable<SettingsRoute> { Inset { SettingsScreen(onBack = { nav.popBackStack() }) } }
                     composable<StatsRoute> { Inset { StatsScreen(onBack = { nav.popBackStack() }) } }
                     composable<RewindRoute> { RewindScreen(onBack = { nav.popBackStack() }) }
@@ -294,7 +289,7 @@ private fun Inset(content: @Composable () -> Unit) {
     Box(Modifier.fillMaxSize().statusBarsPadding()) { content() }
 }
 
-/** Compact bottom navigation of the previous app: small icons, bold label when active, TGym tab in accent. */
+/** Compact bottom navigation: small icons, bold label when active. */
 @Composable
 private fun BottomBar(tabs: List<Tab>, selected: (Tab) -> Boolean, onSelect: (Tab) -> Unit) {
     val c = LocalSpotifreeColors.current
@@ -309,12 +304,7 @@ private fun BottomBar(tabs: List<Tab>, selected: (Tab) -> Boolean, onSelect: (Ta
     ) {
         tabs.forEach { tab ->
             val active = selected(tab)
-            val special = tab.route == WorkoutRoute
-            val tint = when {
-                special -> c.accent
-                active -> Color.White
-                else -> c.textSecondary
-            }
+            val tint = if (active) Color.White else c.textSecondary
             Column(
                 Modifier
                     .weight(1f)
@@ -340,10 +330,8 @@ private suspend fun handleIntent(intent: Intent, actions: AppActions, onOpenPlay
             "playlist" -> when {
                 id != null && graph.db.playlists().get(id) != null -> actions.openPlaylist(id)
                 id == com.spotifree.app.data.model.Playlist.LIKED_ID -> actions.openPlaylist(id)
-                // TGym asks for its gym playlist ("pl-gym-beast-mode"): the workout screen has the gym mix
-                else -> actions.nav.navigate(WorkoutRoute) { launchSingleTop = true }
+                else -> Unit
             }
-            "workout" -> actions.nav.navigate(WorkoutRoute) { launchSingleTop = true }
             else -> Unit // spotifree:// just opens the app
         }
         return

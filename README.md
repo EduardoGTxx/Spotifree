@@ -38,7 +38,6 @@ Desde la **versión 2.0** es una app **nativa en Kotlin** (Jetpack Compose + Med
 | 📥 **Importar** | Datos de Spotify ("Descargar tus datos"), CSV (Exportify, Spotlistr, TuneMyMusic, Soundiiz…) y playlists de tu cuenta de YouTube Music. |
 | ☁️ **Copias de seguridad** | JSON manual o automático y Google Drive. |
 | 🎶 **Extras** | ¿Qué suena?, Escuchar juntos (Jam), estadísticas y Rewind anual. |
-| 🏋️ **TGym** | Modo entrenamiento: baja la música durante el descanso, avisa al terminar y lleva tu racha de días. |
 | 🔄 **Actualizaciones** | Avisos desde GitHub Releases con verificación SHA-256. |
 | 🌐 **Idiomas** | Español, inglés, portugués y francés. |
 
@@ -60,9 +59,8 @@ Spotifree/
 │       ├── playback/         # PlaybackService, resolución de audio, Cast y Android Auto
 │       ├── ui/               # Pantallas Compose
 │       ├── widget/           # Widget de pantalla de inicio (Glance)
-│       └── workout/          # Puente con TGym
 ├── jam-server/               # Servidor WebSocket para "Escuchar juntos"
-├── docs/INTEGRACIONES.md     # Drive, ¿Qué suena?, Jam, Chromecast y TGym
+├── docs/INTEGRACIONES.md     # Drive, ¿Qué suena?, Jam y Chromecast
 └── .github/workflows/        # CI y Release (APK firmado + manifiesto de actualización)
 ```
 
@@ -113,7 +111,6 @@ Spotifree existe gracias al trabajo abierto de muchas personas y proyectos.
 ### Proyectos que lo inspiraron
 - **[RiPlay](https://github.com/fast4x/RiPlay)** de [fast4x](https://github.com/fast4x): base y referencia principal de Spotifree.
 - **[RiMusic](https://github.com/fast4x/RiMusic)** de fast4x y **[ViMusic](https://github.com/vfsfitvnm/ViMusic)** de [vfsfitvnm](https://github.com/vfsfitvnm): los proyectos de los que nace RiPlay.
-- **[TGym](https://github.com/Truesilverking/TGym)**: app de entrenamiento con la que Spotifree se conecta.
 
 ### Música y contenido
 - **[NewPipe Extractor](https://github.com/TeamNewPipe/NewPipeExtractor)** de [TeamNewPipe](https://github.com/TeamNewPipe), el corazón de la búsqueda y la reproducción (GPL-3.0).

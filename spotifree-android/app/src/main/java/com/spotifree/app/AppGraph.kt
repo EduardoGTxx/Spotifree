@@ -47,7 +47,6 @@ class AppGraph(val context: Context) {
     val lyrics = LyricsRepository(http, db.cache(), isOffline = { settings.current.offlineMode })
     val account = YouTubeAccountRepository(context, http, music)
     val messages = Messages()
-    val playbackEvents = com.spotifree.app.playback.PlaybackEvents()
 
     val jam = com.spotifree.app.data.jam.JamClient(http, scope) { settings.current.offlineMode }
     val recognizer = com.spotifree.app.data.recognition.Recognizer(context, http) { settings.current.offlineMode }

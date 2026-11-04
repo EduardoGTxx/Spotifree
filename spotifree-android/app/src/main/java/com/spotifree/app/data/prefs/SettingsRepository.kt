@@ -60,13 +60,6 @@ data class AppSettings(
     val recognitionApiKey: String = "",
     val jamServerUrl: String = "",
     val castReceiverAppId: String = "",
-    // TGym companion
-    val enableTGym: Boolean = false,
-    val tgymLiveSync: Boolean = true,
-    val tgymDuckingLevel: Float = 0.3f,
-    val workoutRestSec: Int = 90,
-    val workoutStreakDays: Int = 0,
-    val lastWorkoutDate: String? = null,
     // App update
     val dismissedUpdateVersion: String? = null,
     // Migration from the Capacitor app

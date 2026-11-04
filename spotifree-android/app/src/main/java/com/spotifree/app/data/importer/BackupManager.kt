@@ -270,10 +270,6 @@ class BackupManager(
             blockedTrackIds: List<String> = emptyList(),
         ): JsonObject = buildJsonObject {
             put("language", s.language)
-            put("enableTGymIntegration", s.enableTGym)
-            put("tgymLiveSync", s.tgymLiveSync)
-            put("tgymDuckingLevel", s.tgymDuckingLevel)
-            put("workoutRestDuration", s.workoutRestSec)
             put("audioDownloadQuality", s.audioQuality)
             put("downloadOnlyWifi", s.downloadOnlyWifi)
             put("autoCacheOnPlay", s.autoCacheOnPlay)
@@ -300,8 +296,6 @@ class BackupManager(
             put("jamServerUrl", s.jamServerUrl)
             put("castReceiverAppId", s.castReceiverAppId)
             put("driveAutoBackup", s.driveAutoBackup)
-            put("workoutStreakDays", s.workoutStreakDays)
-            s.lastWorkoutDate?.let { put("lastWorkoutDate", it) }
             put("playbackSpeed", s.playbackSpeed)
             put("preservePitch", s.preservePitch)
             put("effectPreset", s.effectPreset)
@@ -311,10 +305,6 @@ class BackupManager(
 
         internal fun applyLegacySettings(s: AppSettings, o: JsonObject): AppSettings = s.copy(
             language = o.s("language")?.takeIf { it in listOf("es", "en", "pt", "fr") } ?: s.language,
-            enableTGym = o.b("enableTGymIntegration") ?: s.enableTGym,
-            tgymLiveSync = o.b("tgymLiveSync") ?: s.tgymLiveSync,
-            tgymDuckingLevel = o.f("tgymDuckingLevel") ?: s.tgymDuckingLevel,
-            workoutRestSec = o.i("workoutRestDuration") ?: s.workoutRestSec,
             audioQuality = o.s("audioDownloadQuality")?.takeIf { it in listOf("saving", "normal", "high") } ?: s.audioQuality,
             downloadOnlyWifi = o.b("downloadOnlyWifi") ?: s.downloadOnlyWifi,
             autoCacheOnPlay = o.b("autoCacheOnPlay") ?: s.autoCacheOnPlay,
@@ -341,8 +331,6 @@ class BackupManager(
             jamServerUrl = o.s("jamServerUrl") ?: s.jamServerUrl,
             castReceiverAppId = o.s("castReceiverAppId") ?: s.castReceiverAppId,
             driveAutoBackup = o.b("driveAutoBackup") ?: s.driveAutoBackup,
-            workoutStreakDays = o.i("workoutStreakDays") ?: s.workoutStreakDays,
-            lastWorkoutDate = o.s("lastWorkoutDate") ?: s.lastWorkoutDate,
             playbackSpeed = o.f("playbackSpeed")?.coerceIn(0.5f, 2f) ?: s.playbackSpeed,
             preservePitch = o.b("preservePitch") ?: s.preservePitch,
             effectPreset = o.s("effectPreset") ?: s.effectPreset,

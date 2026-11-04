@@ -5,9 +5,6 @@ import com.spotifree.app.data.prefs.AppSettings
 import com.spotifree.app.util.backoffDelayMs
 import com.spotifree.app.util.retryWithBackoff
 import com.spotifree.app.util.runCatchingCancellable
-import com.spotifree.app.workout.TGymBridge
-import com.spotifree.app.workout.TGymEvent
-import com.spotifree.app.workout.WorkoutStreak
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.currentTime
@@ -55,43 +52,6 @@ class IntegrationLogicTest {
         } catch (_: CancellationException) {
         }
         assertTrue(runCatchingCancellable { error("x") }.isFailure)
-    }
-
-    @Test
-    fun tgymEventsParse() {
-        val now = 1_000_000L
-        assertEquals(
-            TGymEvent.RestStart(now + 90_000, 90, 90, "Press banca"),
-            TGymBridge.parse("REST_START", null, 90, now + 90_000, 90, "Press banca", null, 0, now),
-        )
-        // endsAt missing: computed from seconds
-        assertEquals(TGymEvent.RestStart(now + 60_000, 60, 60, ""), TGymBridge.parse("rest_start", null, 60, 0, 0, null, null, 0, now))
-        // already over: treated as the end of the rest
-        assertEquals(TGymEvent.RestEnd, TGymBridge.parse("REST_START", null, 30, now - 1, 30, null, null, 0, now))
-        assertEquals(TGymEvent.RestEnd, TGymBridge.parse("REST_END", null, 0, 0, 0, null, null, 0, now))
-        // legacy boolean extra
-        assertTrue(TGymBridge.parse(null, true, 45, 0, 0, null, null, 0, now) is TGymEvent.RestStart)
-        assertEquals(TGymEvent.RestEnd, TGymBridge.parse(null, false, 0, 0, 0, null, null, 0, now))
-        assertEquals(
-            TGymEvent.WorkoutFinish(LocalDate.of(2026, 10, 26), 3_600_000),
-            TGymBridge.parse("WORKOUT_FINISH", null, 0, 0, 0, null, "2026-10-26", 3_600_000, now),
-        )
-        assertEquals(null, TGymBridge.parse("UNKNOWN", null, 0, 0, 0, null, null, 0, now))
-    }
-
-    @Test
-    fun workoutStreak() {
-        val d = LocalDate.of(2026, 10, 26)
-        var s = WorkoutStreak.mark(AppSettings(), d)
-        assertEquals(1, s.workoutStreakDays)
-        s = WorkoutStreak.mark(s, d) // same day twice
-        assertEquals(1, s.workoutStreakDays)
-        s = WorkoutStreak.mark(s, d.plusDays(1))
-        assertEquals(2, s.workoutStreakDays)
-        assertEquals(2, WorkoutStreak.current(s, d.plusDays(2))) // still alive the day after
-        assertEquals(0, WorkoutStreak.current(s, d.plusDays(3)))
-        s = WorkoutStreak.mark(s, d.plusDays(4)) // gap: starts again
-        assertEquals(1, s.workoutStreakDays)
     }
 
     @Test
@@ -296,8 +256,6 @@ class IntegrationLogicTest {
             jamServerUrl = "wss://jam.example/ws",
             castReceiverAppId = "ABCD1234",
             driveAutoBackup = true,
-            workoutStreakDays = 7,
-            lastWorkoutDate = "2026-11-03",
             playbackSpeed = 1.25f,
             preservePitch = false,
             effectPreset = "nightcore",
@@ -313,24 +271,6 @@ class IntegrationLogicTest {
         val auth = com.spotifree.app.data.remote.YouTubeAccountRepository.authorization("LOGIN_INFO=1; SAPISID=abc123xyz")
         assertNotNull(auth)
         assertTrue(auth!!.startsWith("SAPISIDHASH "))
-    }
-
-    @Test
-    fun tgymBridgeRejectsMismatchedBroadcastAction() {
-        assertNull(TGymBridge.parse("REST_START", true, 60, 0L, 60, "Bench", null, 0L, now = 1_000L, action = "android.intent.action.MAIN"))
-        assertNull(TGymBridge.parse("WORKOUT_FINISH", null, 0, 0L, 0, null, "2026-11-03", 1000L, action = null))
-        assertNotNull(TGymBridge.parse("REST_START", true, 60, 0L, 60, "Bench", null, 0L, now = 1_000L, action = TGymBridge.ACTION))
-    }
-
-    @Test
-    fun workoutOfflineFilterKeepsOnlyLocalAndDownloadedTracks() {
-        val list = listOf(
-            com.spotifree.app.data.model.Track(id = "local-1", title = "Local", artist = "A", localUri = "content://media/external/audio/1"),
-            com.spotifree.app.data.model.Track(id = "dl-1", title = "Downloaded", artist = "B", videoId = "v1"),
-            com.spotifree.app.data.model.Track(id = "online-1", title = "Online", artist = "C", videoId = "v2"),
-        )
-        val playable = com.spotifree.app.ui.workout.filterOfflinePlayableTracks(list, setOf("dl-1"))
-        assertEquals(listOf("local-1", "dl-1"), playable.map { it.id })
     }
 
     @Test

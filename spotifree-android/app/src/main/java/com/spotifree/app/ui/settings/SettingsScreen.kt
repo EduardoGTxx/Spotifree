@@ -290,15 +290,6 @@ fun SettingsScreen(onBack: () -> Unit) {
                     SettingItem(t("castReceiver"), s.castReceiverAppId.ifBlank { t("castReceiverDefault") }) { castDialog = true }
                 }
             }
-            // ---------------------------------------------------------- TGym
-            item {
-                SettingsCard(t("tgymSection"), Icons.Default.FitnessCenter) {
-                    SettingSwitch(t("enableTGymLabel"), t("enableTGymDesc"), s.enableTGym) { v -> set { it.copy(enableTGym = v) } }
-                    SettingSwitch(t("tgymLiveSyncLabel"), t("tgymLiveSyncDesc"), s.tgymLiveSync, enabled = s.enableTGym) { v -> set { it.copy(tgymLiveSync = v) } }
-                    SettingSlider(t("duckingLevel"), { "${(it * 100).toInt()} %" }, s.tgymDuckingLevel, 0.05f..0.8f, 14) { v -> set { it.copy(tgymDuckingLevel = v) } }
-                    SettingSlider(t("restDurationLabel"), { "${it.toInt()} s" }, s.workoutRestSec.toFloat(), 15f..300f, 18) { v -> set { it.copy(workoutRestSec = (v / 15).toInt() * 15) } }
-                }
-            }
             // ---------------------------------------------------------- updates & about
             item {
                 SettingsCard(t("updatesSection"), Icons.Default.SystemUpdate) {

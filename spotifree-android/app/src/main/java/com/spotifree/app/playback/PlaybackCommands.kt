@@ -12,13 +12,11 @@ object PlaybackCommands {
     const val LIKE = "sf.like"
     const val SLEEP_TIMER = "sf.sleep" // args: minutes (Int, 0 = cancel) or endOfSong (Boolean)
     const val START_RADIO = "sf.radio" // args: trackId
-    const val DUCK = "sf.duck" // args: on (Boolean)
     const val APPLY_SETTINGS = "sf.settings"
 
     const val ARG_MINUTES = "minutes"
     const val ARG_END_OF_SONG = "endOfSong"
     const val ARG_TRACK_ID = "trackId"
-    const val ARG_ON = "on"
 
     // Session extras published by the service
     const val EXTRA_SLEEP_MODE = "sleepMode" // "", "timed", "end_of_song"
@@ -28,7 +26,7 @@ object PlaybackCommands {
     const val EXTRA_ERROR_AT = "lastErrorAt"
     const val EXTRA_RESOLVING = "resolving"
 
-    val all = listOf(LIKE, SLEEP_TIMER, START_RADIO, DUCK, APPLY_SETTINGS).map { SessionCommand(it, Bundle.EMPTY) }
+    val all = listOf(LIKE, SLEEP_TIMER, START_RADIO, APPLY_SETTINGS).map { SessionCommand(it, Bundle.EMPTY) }
 }
 
 /** Runs a suspend block and exposes it as the Guava future Media3 callbacks expect. */

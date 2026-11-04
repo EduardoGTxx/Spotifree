@@ -60,7 +60,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="music.youtube.com" />
             </intent-filter>
-            <!-- Deep links: TGym's "Abrir Spotifree" (spotifree://, spotifree://playlist/<id>, spotifree://workout) -->
+            <!-- Deep links: spotifree://, spotifree://playlist/<id> -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -111,16 +111,6 @@
         <receiver
             android:name=".data.update.InstallResultReceiver"
             android:exported="false" />
-
-        <!-- TGym companion: another app can announce rest periods to lower the music -->
-        <receiver
-            android:name=".workout.TGymReceiver"
-            android:exported="true"
-            tools:ignore="ExportedReceiver">
-            <intent-filter>
-                <action android:name="com.spotifree.app.action.TGYM_REST" />
-            </intent-filter>
-        </receiver>
 
         <!-- Resume playback when headphones/car Bluetooth connect (opt-in setting) -->
         <receiver
