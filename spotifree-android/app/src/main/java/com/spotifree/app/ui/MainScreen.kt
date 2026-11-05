@@ -13,7 +13,13 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -264,15 +270,54 @@ fun MainScreen(activity: MainActivity) {
     val destination = backStack?.destination
 
     CompositionLocalProvider(LocalActions provides actions) {
-        Box(Modifier.fillMaxSize().background(c.background)) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .then(
+                    if (c.isGlassy) {
+                        Modifier.background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    c.accent.copy(alpha = 0.50f),
+                                    c.accent.copy(alpha = 0.20f),
+                                    Color(0xFF0C0D14),
+                                    Color(0xFF07070A)
+                                )
+                            )
+                        )
+                    } else {
+                        Modifier.background(c.background)
+                    }
+                )
+        ) {
+            if (c.isGlassy) {
+                Canvas(Modifier.fillMaxSize()) {
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(c.accent.copy(alpha = 0.40f), Color.Transparent),
+                            center = Offset(size.width * 0.88f, size.height * 0.12f),
+                            radius = size.width * 0.90f
+                        )
+                    )
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(c.accent.copy(alpha = 0.28f), Color.Transparent),
+                            center = Offset(size.width * 0.12f, size.height * 0.72f),
+                            radius = size.width * 0.95f
+                        )
+                    )
+                }
+            }
             Scaffold(
-                containerColor = c.background,
+                containerColor = if (c.isGlassy) Color.Transparent else c.background,
                 // Screens draw behind the status bar themselves (header gradients); see [Inset]
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 snackbarHost = { SnackbarHost(snackbar) },
                 bottomBar = {
                     // Rewind is full screen, like stories
-                    if (destination?.hasRoute(RewindRoute::class) != true) Column {
+                    if (destination?.hasRoute(RewindRoute::class) != true) Column(
+                        modifier = if (c.isGlassy) Modifier.padding(horizontal = 12.dp, vertical = 6.dp) else Modifier
+                    ) {
                         if (playerState.current != null) MiniPlayer(onOpen = { showPlayer = true })
                         BottomBar(tabs, selected = { tab -> destination?.hierarchy?.any { d -> d.hasRoute(tab.route::class) } == true }) { tab ->
                             nav.navigate(tab.route) {
@@ -334,29 +379,83 @@ private fun Inset(content: @Composable () -> Unit) {
 @Composable
 private fun BottomBar(tabs: List<Tab>, selected: (Tab) -> Boolean, onSelect: (Tab) -> Unit) {
     val c = LocalSpotifreeColors.current
-    val line = Color.White.copy(alpha = 0.06f)
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .background(if (c.amoled) Color.Black else Color(0xFA121212))
-            .drawBehind { drawLine(line, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }
-            .navigationBarsPadding()
-            .height(60.dp),
-    ) {
-        tabs.forEach { tab ->
-            val active = selected(tab)
-            val tint = if (active) Color.White else c.textSecondary
-            Column(
-                Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onSelect(tab) },
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Icon(if (active) tab.selectedIcon else tab.icon, tab.label, tint = tint, modifier = Modifier.size(24.dp))
-                Spacer(Modifier.height(3.dp))
-                Text(tab.label, color = tint, fontSize = 11.sp, fontWeight = if (active) FontWeight.ExtraBold else FontWeight.Medium, maxLines = 1)
+    if (c.isGlassy) {
+        val glassShape = RoundedCornerShape(26.dp)
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(bottom = 6.dp)
+                .shadow(elevation = 16.dp, shape = glassShape, spotColor = c.accent.copy(alpha = 0.35f))
+                .clip(glassShape)
+                .background(Color.White.copy(alpha = 0.14f))
+                .border(
+                    width = 1.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.12f))
+                    ),
+                    shape = glassShape
+                )
+                .navigationBarsPadding()
+                .height(60.dp),
+        ) {
+            tabs.forEach { tab ->
+                val active = selected(tab)
+                val tint = if (active) Color.White else Color.White.copy(alpha = 0.65f)
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onSelect(tab) },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    if (active) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.White.copy(alpha = 0.18f))
+                                .padding(horizontal = 14.dp, vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(tab.selectedIcon, tab.label, tint = tint, modifier = Modifier.size(22.dp))
+                                Spacer(Modifier.height(2.dp))
+                                Text(tab.label, color = tint, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                            }
+                        }
+                    } else {
+                        Icon(tab.icon, tab.label, tint = tint, modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.height(2.dp))
+                        Text(tab.label, color = tint, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                    }
+                }
+            }
+        }
+    } else {
+        val line = Color.White.copy(alpha = 0.06f)
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(if (c.amoled) Color.Black else Color(0xFA121212))
+                .drawBehind { drawLine(line, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }
+                .navigationBarsPadding()
+                .height(60.dp),
+        ) {
+            tabs.forEach { tab ->
+                val active = selected(tab)
+                val tint = if (active) Color.White else c.textSecondary
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onSelect(tab) },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Icon(if (active) tab.selectedIcon else tab.icon, tab.label, tint = tint, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.height(3.dp))
+                    Text(tab.label, color = tint, fontSize = 11.sp, fontWeight = if (active) FontWeight.ExtraBold else FontWeight.Medium, maxLines = 1)
+                }
             }
         }
     }

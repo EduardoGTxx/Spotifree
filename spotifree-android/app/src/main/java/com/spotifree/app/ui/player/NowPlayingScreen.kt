@@ -13,7 +13,10 @@ import com.spotifree.app.ui.common.SeekBar
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -120,7 +123,22 @@ fun NowPlayingScreen(onClose: () -> Unit) {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(Brush.verticalGradient(listOf(animated, if (c.amoled) Color.Black else c.background)))
+                    .then(
+                        if (c.isGlassy) {
+                            Modifier.background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        c.accent.copy(alpha = 0.55f),
+                                        c.accent.copy(alpha = 0.22f),
+                                        Color(0xFF0D0E16),
+                                        Color(0xFF07070B)
+                                    )
+                                )
+                            )
+                        } else {
+                            Modifier.background(Brush.verticalGradient(listOf(animated, if (c.amoled) Color.Black else c.background)))
+                        }
+                    )
                     .pointerInput(Unit) {
                         detectVerticalDragGestures(
                             onDragEnd = {
@@ -133,6 +151,17 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                     .statusBarsPadding()
                     .navigationBarsPadding(),
             ) {
+                if (c.isGlassy) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                colors = listOf(c.accent.copy(alpha = 0.45f), Color.Transparent),
+                                center = Offset(size.width * 0.5f, size.height * 0.32f),
+                                radius = size.width * 0.85f
+                            )
+                        )
+                    }
+                }
                 Column(Modifier.fillMaxSize()) {
                     // Top bar
                     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -180,14 +209,27 @@ fun NowPlayingScreen(onClose: () -> Unit) {
 @Composable
 private fun CoverArt(url: String?, onSwipe: (Float) -> Unit) {
     val drag = remember { mutableFloatStateOf(0f) }
+    val c = LocalSpotifreeColors.current
+    val shape = RoundedCornerShape(if (c.isGlassy) 24.dp else 8.dp)
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         val side = minOf(maxWidth, maxHeight)
         Artwork(
             url,
             size = side,
-            shape = RoundedCornerShape(8.dp),
+            shape = shape,
             modifier = Modifier
-                .shadow(16.dp, RoundedCornerShape(8.dp))
+                .shadow(if (c.isGlassy) 24.dp else 16.dp, shape, spotColor = if (c.isGlassy) c.accent.copy(alpha = 0.45f) else Color.Black)
+                .then(
+                    if (c.isGlassy) {
+                        Modifier.border(
+                            1.5.dp,
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.60f), Color.White.copy(alpha = 0.15f))
+                            ),
+                            shape
+                        )
+                    } else Modifier
+                )
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
                         onDragEnd = {
@@ -259,20 +301,62 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
         IconButton(onClick = { graph.player.toggleShuffle() }) {
             Icon(Icons.Default.Shuffle, null, tint = if (state.shuffle) c.accent else Color.White)
         }
-        IconButton(onClick = { graph.player.previous() }, modifier = Modifier.size(56.dp)) {
-            Icon(Icons.Default.SkipPrevious, null, modifier = Modifier.size(40.dp))
+        val skipModifier = if (c.isGlassy) {
+            Modifier
+                .size(54.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.12f))
+                .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+        } else {
+            Modifier.size(56.dp)
         }
-        Box(
-            Modifier.size(68.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(Color.White),
-            contentAlignment = Alignment.Center,
-        ) {
-            IconButton(onClick = { graph.player.togglePlay() }, modifier = Modifier.fillMaxSize()) {
-                if (state.isBuffering) CircularProgressIndicator(Modifier.size(30.dp), color = Color.Black, strokeWidth = 3.dp)
-                else Icon(if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(40.dp))
+        IconButton(onClick = { graph.player.previous() }, modifier = skipModifier) {
+            Icon(Icons.Default.SkipPrevious, null, modifier = Modifier.size(38.dp))
+        }
+        if (c.isGlassy) {
+            Box(
+                Modifier
+                    .size(72.dp)
+                    .shadow(16.dp, CircleShape, spotColor = c.accent.copy(alpha = 0.5f))
+                    .clip(CircleShape)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.28f),
+                                Color.White.copy(alpha = 0.14f)
+                            )
+                        )
+                    )
+                    .border(
+                        1.5.dp,
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.70f),
+                                Color.White.copy(alpha = 0.20f)
+                            )
+                        ),
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                IconButton(onClick = { graph.player.togglePlay() }, modifier = Modifier.fillMaxSize()) {
+                    if (state.isBuffering) CircularProgressIndicator(Modifier.size(32.dp), color = Color.White, strokeWidth = 3.dp)
+                    else Icon(if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.size(42.dp))
+                }
+            }
+        } else {
+            Box(
+                Modifier.size(68.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(Color.White),
+                contentAlignment = Alignment.Center,
+            ) {
+                IconButton(onClick = { graph.player.togglePlay() }, modifier = Modifier.fillMaxSize()) {
+                    if (state.isBuffering) CircularProgressIndicator(Modifier.size(30.dp), color = Color.Black, strokeWidth = 3.dp)
+                    else Icon(if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(40.dp))
+                }
             }
         }
-        IconButton(onClick = { graph.player.next() }, enabled = state.hasNext || state.queue.isNotEmpty(), modifier = Modifier.size(56.dp)) {
-            Icon(Icons.Default.SkipNext, null, modifier = Modifier.size(40.dp))
+        IconButton(onClick = { graph.player.next() }, enabled = state.hasNext || state.queue.isNotEmpty(), modifier = skipModifier) {
+            Icon(Icons.Default.SkipNext, null, modifier = Modifier.size(38.dp))
         }
         IconButton(onClick = { graph.player.cycleRepeat() }) {
             Icon(
@@ -301,10 +385,27 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
 @Composable
 private fun PlayerPill(text: String?, icon: androidx.compose.ui.graphics.vector.ImageVector?, active: Boolean, onClick: () -> Unit) {
     val c = LocalSpotifreeColors.current
+    val bg = if (c.isGlassy) {
+        if (active) c.accent.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f)
+    } else {
+        if (active) Color.White.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.1f)
+    }
     Row(
-        Modifier.height(32.dp).clip(CircleShape)
-            .background(if (active) Color.White.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.1f))
-            .clickable(onClick = onClick).padding(horizontal = 12.dp),
+        Modifier
+            .height(32.dp)
+            .clip(CircleShape)
+            .background(bg)
+            .then(
+                if (c.isGlassy) {
+                    Modifier.border(
+                        1.dp,
+                        if (active) c.accent.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.22f),
+                        CircleShape
+                    )
+                } else Modifier
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) Icon(icon, null, tint = if (active) c.accent else Color.White, modifier = Modifier.size(16.dp))

@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
@@ -41,11 +43,29 @@ import com.spotifree.app.ui.theme.LocalSpotifreeColors
 @Composable
 fun SettingsCard(title: String, icon: ImageVector, content: @Composable () -> Unit) {
     val c = LocalSpotifreeColors.current
+    val shape = RoundedCornerShape(16.dp)
     Column(
         Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.04f))
-            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(16.dp))
+            .then(
+                if (c.isGlassy) {
+                    Modifier
+                        .shadow(8.dp, shape, spotColor = c.accent.copy(alpha = 0.25f))
+                        .clip(shape)
+                        .background(Color.White.copy(alpha = 0.12f))
+                        .border(
+                            1.dp,
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.10f))
+                            ),
+                            shape
+                        )
+                } else {
+                    Modifier
+                        .clip(shape)
+                        .background(Color.White.copy(alpha = 0.04f))
+                        .border(1.dp, Color.White.copy(alpha = 0.06f), shape)
+                }
+            )
             .padding(vertical = 8.dp),
     ) {
         Row(Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {

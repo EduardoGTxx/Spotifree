@@ -1,6 +1,8 @@
 package com.spotifree.app.ui.player
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.runtime.mutableStateOf
@@ -59,16 +61,29 @@ fun MiniPlayer(onOpen: () -> Unit) {
     val track = state.current ?: return
     val c = LocalSpotifreeColors.current
     val artworkUrl = rememberTrackArtwork(track)
-    val bg by rememberCoverColor(artworkUrl, c.elevated)
+    val coverBg by rememberCoverColor(artworkUrl, c.elevated)
+    val bg = if (c.isGlassy) Color.White.copy(alpha = 0.16f) else coverBg
+    val shape = RoundedCornerShape(if (c.isGlassy) 20.dp else 8.dp)
     val drag = remember { mutableFloatStateOf(0f) }
     var devices by remember { mutableStateOf(false) }
-    Box(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+    Box(Modifier.padding(horizontal = if (c.isGlassy) 12.dp else 8.dp, vertical = 4.dp)) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .shadow(10.dp, RoundedCornerShape(8.dp))
-                .clip(RoundedCornerShape(8.dp))
+                .shadow(if (c.isGlassy) 16.dp else 10.dp, shape, spotColor = if (c.isGlassy) c.accent.copy(alpha = 0.4f) else Color.Black)
+                .clip(shape)
                 .background(bg)
+                .then(
+                    if (c.isGlassy) {
+                        Modifier.border(
+                            1.dp,
+                            Brush.verticalGradient(
+                                listOf(Color.White.copy(alpha = 0.50f), Color.White.copy(alpha = 0.12f))
+                            ),
+                            shape
+                        )
+                    } else Modifier
+                )
                 .clickable(onClick = onOpen)
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
@@ -80,8 +95,8 @@ fun MiniPlayer(onOpen: () -> Unit) {
                     )
                 },
         ) {
-            Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Artwork(artworkUrl, size = 42.dp)
+            Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Artwork(artworkUrl, size = 44.dp, shape = RoundedCornerShape(if (c.isGlassy) 14.dp else 6.dp))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium,

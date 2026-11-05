@@ -65,10 +65,29 @@ fun Pill(
     onClick: () -> Unit,
 ) {
     val c = LocalSpotifreeColors.current
-    val bg = if (selected) c.accent else c.chip
+    val bg = if (selected) {
+        if (c.isGlassy) c.accent.copy(alpha = 0.88f) else c.accent
+    } else {
+        if (c.isGlassy) Color.White.copy(alpha = 0.16f) else c.chip
+    }
     val fg = if (selected) onColor(c.accent) else Color.White
     Row(
-        modifier.height(34.dp).clip(CircleShape).background(bg).clickable(onClick = onClick).padding(horizontal = 14.dp),
+        modifier
+            .height(34.dp)
+            .shadow(if (c.isGlassy && selected) 6.dp else 0.dp, CircleShape, spotColor = c.accent)
+            .clip(CircleShape)
+            .background(bg)
+            .then(
+                if (c.isGlassy) {
+                    Modifier.border(
+                        1.dp,
+                        if (selected) Color.White.copy(alpha = 0.50f) else Color.White.copy(alpha = 0.22f),
+                        CircleShape
+                    )
+                } else Modifier
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
@@ -89,8 +108,17 @@ fun OutlinePill(
     borderColor: Color = Color.White.copy(alpha = 0.3f),
     onClick: () -> Unit,
 ) {
+    val c = LocalSpotifreeColors.current
+    val actualBorder = if (c.isGlassy) Color.White.copy(alpha = 0.35f) else borderColor
+    val actualBg = if (c.isGlassy) Color.White.copy(alpha = 0.10f) else Color.Transparent
     Row(
-        modifier.height(36.dp).clip(CircleShape).border(1.dp, borderColor, CircleShape).clickable(onClick = onClick).padding(horizontal = 14.dp),
+        modifier
+            .height(36.dp)
+            .clip(CircleShape)
+            .background(actualBg)
+            .border(1.dp, actualBorder, CircleShape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
@@ -114,8 +142,24 @@ fun <T> PillRow(options: List<Pair<T, String>>, selected: T, contentPadding: Pad
 fun PlayFab(onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 56.dp, enabled: Boolean = true, icon: ImageVector = Icons.Default.PlayArrow) {
     val c = LocalSpotifreeColors.current
     Box(
-        modifier.size(size).shadow(if (enabled) 8.dp else 0.dp, CircleShape).clip(CircleShape)
-            .background(if (enabled) c.accent else c.elevated)
+        modifier.size(size)
+            .shadow(if (enabled) 10.dp else 0.dp, CircleShape, spotColor = if (c.isGlassy) c.accent.copy(alpha = 0.5f) else Color.Black)
+            .clip(CircleShape)
+            .background(
+                if (enabled) {
+                    if (c.isGlassy) Brush.verticalGradient(listOf(c.accent, c.accent.copy(alpha = 0.85f)))
+                    else Brush.linearGradient(listOf(c.accent, c.accent))
+                } else Brush.linearGradient(listOf(c.elevated, c.elevated))
+            )
+            .then(
+                if (c.isGlassy && enabled) {
+                    Modifier.border(
+                        1.5.dp,
+                        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.15f))),
+                        CircleShape
+                    )
+                } else Modifier
+            )
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -127,10 +171,23 @@ fun PlayFab(onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 56.dp
 @Composable
 fun TopGlow(color: Color, height: Dp = 280.dp, modifier: Modifier = Modifier) {
     val c = LocalSpotifreeColors.current
-    Box(
-        modifier.fillMaxWidth().height(height)
-            .background(Brush.verticalGradient(0f to color.copy(alpha = 0.45f), 0.75f to c.background.copy(alpha = 0.9f), 1f to c.background)),
-    )
+    if (c.isGlassy) {
+        Box(
+            modifier.fillMaxWidth().height(height)
+                .background(
+                    Brush.verticalGradient(
+                        0f to color.copy(alpha = 0.55f),
+                        0.7f to color.copy(alpha = 0.20f),
+                        1f to Color.Transparent
+                    )
+                ),
+        )
+    } else {
+        Box(
+            modifier.fillMaxWidth().height(height)
+                .background(Brush.verticalGradient(0f to color.copy(alpha = 0.45f), 0.75f to c.background.copy(alpha = 0.9f), 1f to c.background)),
+        )
+    }
 }
 
 /** A colourful gradient square with an icon: covers for shortcuts that have no picture. */

@@ -28,6 +28,9 @@ data class SpotifreeColors(
     val amoled: Boolean,
     val textMuted: Color = Color(0xFF727272),
     val chip: Color = Color(0x1AFFFFFF),
+    val isGlassy: Boolean = false,
+    val glassBorder: Color = Color.Transparent,
+    val glassHighlight: Color = Color.Transparent,
 )
 
 val LocalSpotifreeColors = staticCompositionLocalOf {
@@ -66,31 +69,66 @@ fun onColor(c: Color): Color {
 }
 
 @Composable
-fun SpotifreeTheme(accentHex: String, amoled: Boolean, content: @Composable () -> Unit) {
+fun SpotifreeTheme(accentHex: String, amoled: Boolean, uiTheme: String = "default", content: @Composable () -> Unit) {
+    val isGlassy = (uiTheme == "glassy")
     val accent = parseColor(accentHex)
+    // Glassy: translucent surfaces and borders over ambient glowing gradient background.
     // AMOLED: pure black backgrounds (pixels off) with slightly lifted cards so they stay visible.
-    val bg = if (amoled) Color.Black else Color(0xFF121212)
-    val surface = if (amoled) Color(0xFF0A0A0A) else Color(0xFF181818)
-    val elevated = if (amoled) Color(0xFF161616) else Color(0xFF282828)
-    val colors = SpotifreeColors(accent, bg, surface, elevated, Color(0xFFB3B3B3), amoled)
+    val bg = when {
+        isGlassy -> Color.Transparent
+        amoled -> Color.Black
+        else -> Color(0xFF121212)
+    }
+    val surface = when {
+        isGlassy -> Color(0x22FFFFFF)
+        amoled -> Color(0xFF0A0A0A)
+        else -> Color(0xFF181818)
+    }
+    val elevated = when {
+        isGlassy -> Color(0x32FFFFFF)
+        amoled -> Color(0xFF161616)
+        else -> Color(0xFF282828)
+    }
+    val chip = when {
+        isGlassy -> Color(0x28FFFFFF)
+        else -> Color(0x1AFFFFFF)
+    }
+    val glassBorder = if (isGlassy) Color(0x45FFFFFF) else Color.Transparent
+    val glassHighlight = if (isGlassy) Color(0x80FFFFFF) else Color.Transparent
+    val textSecondary = if (isGlassy) Color(0xCCFFFFFF) else Color(0xFFB3B3B3)
+    val textMuted = if (isGlassy) Color(0x99FFFFFF) else Color(0xFF727272)
+
+    val colors = SpotifreeColors(
+        accent = accent,
+        background = bg,
+        surface = surface,
+        elevated = elevated,
+        textSecondary = textSecondary,
+        amoled = if (isGlassy) false else amoled,
+        textMuted = textMuted,
+        chip = chip,
+        isGlassy = isGlassy,
+        glassBorder = glassBorder,
+        glassHighlight = glassHighlight,
+    )
     val scheme = darkColorScheme(
         primary = accent,
         onPrimary = onColor(accent),
         secondary = accent,
         onSecondary = onColor(accent),
-        background = bg,
+        background = if (isGlassy) Color.Transparent else bg,
         onBackground = Color.White,
-        surface = bg,
+        surface = if (isGlassy) surface else bg,
         onSurface = Color.White,
         surfaceVariant = elevated,
-        onSurfaceVariant = Color(0xFFB3B3B3),
+        onSurfaceVariant = textSecondary,
         surfaceContainer = surface,
-        surfaceContainerLow = surface,
-        surfaceContainerLowest = bg,
+        surfaceContainerLow = if (isGlassy) Color(0x18FFFFFF) else surface,
+        surfaceContainerLowest = if (isGlassy) Color.Transparent else bg,
         surfaceContainerHigh = elevated,
-        surfaceContainerHighest = if (amoled) Color(0xFF1E1E1E) else Color(0xFF333333),
-        outline = Color(0xFF535353),
-        outlineVariant = Color(0xFF3E3E3E),
+        surfaceContainerHighest = if (isGlassy) Color(0x40FFFFFF) else if (amoled) Color(0xFF1E1E1E) else Color(0xFF333333),
+        outline = if (isGlassy) glassBorder else Color(0xFF535353),
+        outlineVariant = if (isGlassy) Color(0x24FFFFFF) else Color(0xFF3E3E3E),
         error = Color(0xFFFF5252),
     )
     val typography = spotifreeTypography()

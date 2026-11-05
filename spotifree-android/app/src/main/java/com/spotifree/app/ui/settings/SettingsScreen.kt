@@ -193,6 +193,12 @@ fun SettingsScreen(onBack: () -> Unit) {
             // ---------------------------------------------------------- appearance
             item {
                 SettingsCard(t("appearanceSection"), Icons.Default.Palette) {
+                    SettingChoice(
+                        title = t("uiThemeLabel"),
+                        subtitle = t("uiThemeDesc"),
+                        options = listOf("default" to t("uiThemeDefault"), "glassy" to t("uiThemeGlassy")),
+                        selected = s.uiTheme,
+                    ) { v -> set { it.copy(uiTheme = v) } }
                     Text(t("accentColor"), modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(ACCENT_PRESETS) { hex ->
@@ -205,7 +211,9 @@ fun SettingsScreen(onBack: () -> Unit) {
                             ) { if (selected) Icon(Icons.Default.Check, null, tint = Color.Black) }
                         }
                     }
-                    SettingSwitch(t("amoledLabel"), t("amoledDesc"), s.amoledTheme) { v -> set { it.copy(amoledTheme = v) } }
+                    if (s.uiTheme != "glassy") {
+                        SettingSwitch(t("amoledLabel"), t("amoledDesc"), s.amoledTheme) { v -> set { it.copy(amoledTheme = v) } }
+                    }
                 }
             }
             // ---------------------------------------------------------- playback

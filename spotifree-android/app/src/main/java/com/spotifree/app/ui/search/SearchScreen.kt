@@ -25,6 +25,8 @@ import com.spotifree.app.util.runCatchingCancellable
 
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -208,32 +210,43 @@ fun SearchScreen() {
                 if (!actions2.openLink(text)) graph.messages.post(strings["noLinkInClipboard"], isError = true)
             }
         }
+        val searchShape = RoundedCornerShape(if (c.isGlassy) 16.dp else 8.dp)
         TextField(
             value = ui.query,
             onValueChange = vm::onQuery,
-            placeholder = { Text(t("searchPlaceholder"), color = Color(0xFF535353), fontWeight = FontWeight.SemiBold) },
-            leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Black) },
+            placeholder = { Text(t("searchPlaceholder"), color = if (c.isGlassy) Color.White.copy(alpha = 0.5f) else Color(0xFF535353), fontWeight = FontWeight.SemiBold) },
+            leadingIcon = { Icon(Icons.Default.Search, null, tint = if (c.isGlassy) Color.White else Color.Black) },
             trailingIcon = {
-                if (ui.query.isNotEmpty()) IconButton(onClick = vm::clear) { Icon(Icons.Default.Clear, null, tint = Color.Black) }
+                if (ui.query.isNotEmpty()) IconButton(onClick = vm::clear) { Icon(Icons.Default.Clear, null, tint = if (c.isGlassy) Color.White else Color.Black) }
                 else IconButton(onClick = {
                     runCatchingCancellable {
                         voice.launch(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
                             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                             .putExtra(RecognizerIntent.EXTRA_PROMPT, strings["searchPlaceholder"]))
                     }.onFailure { graph.messages.post(strings["voiceUnavailable"], isError = true) }
-                }) { Icon(Icons.Default.Mic, t("voiceSearch"), tint = Color.Black) }
+                }) { Icon(Icons.Default.Mic, t("voiceSearch"), tint = if (c.isGlassy) Color.White else Color.Black) }
             },
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { vm.submit(); focus.clearFocus() }),
-            shape = RoundedCornerShape(8.dp),
+            shape = searchShape,
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.White, unfocusedContainerColor = Color.White,
-                focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, cursorColor = Color.Black,
-                focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
+                focusedContainerColor = if (c.isGlassy) Color.White.copy(alpha = 0.16f) else Color.White,
+                unfocusedContainerColor = if (c.isGlassy) Color.White.copy(alpha = 0.12f) else Color.White,
+                focusedTextColor = if (c.isGlassy) Color.White else Color.Black,
+                unfocusedTextColor = if (c.isGlassy) Color.White else Color.Black,
+                cursorColor = if (c.isGlassy) c.accent else Color.Black,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
             ),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+                .then(
+                    if (c.isGlassy) Modifier
+                        .shadow(8.dp, searchShape, spotColor = c.accent.copy(alpha = 0.25f))
+                        .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.10f))), searchShape)
+                    else Modifier
+                ),
         )
         // Filter pills are always visible (previous app); before searching they preselect the type
         val filters = listOf(null to t("filterAll"), SearchFilter.SONGS to t("filterSongs"), SearchFilter.ALBUMS to t("filterAlbums"),

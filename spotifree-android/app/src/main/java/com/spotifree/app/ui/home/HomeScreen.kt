@@ -3,6 +3,8 @@ package com.spotifree.app.ui.home
 import com.spotifree.app.util.runCatchingCancellable
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -343,12 +345,28 @@ private data class Tile(val title: String, val image: String?, val colors: List<
 /** Spotify's two-column shortcut: cover (or coloured icon) on the left, bold title. */
 @Composable
 private fun QuickTile(tile: Tile, modifier: Modifier) {
+    val c = LocalSpotifreeColors.current
+    val shape = RoundedCornerShape(if (c.isGlassy) 12.dp else 6.dp)
     Row(
-        modifier.height(56.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha = 0.08f)).clickable(onClick = tile.onClick),
+        modifier
+            .height(56.dp)
+            .then(
+                if (c.isGlassy) {
+                    Modifier
+                        .shadow(6.dp, shape, spotColor = c.accent.copy(alpha = 0.25f))
+                        .clip(shape)
+                        .background(Color.White.copy(alpha = 0.14f))
+                        .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.10f))), shape)
+                } else {
+                    Modifier.clip(shape).background(Color.White.copy(alpha = 0.08f))
+                }
+            )
+            .clickable(onClick = tile.onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (tile.image != null) Artwork(tile.image, size = 56.dp, shape = RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp))
-        else GradientIcon(tile.colors, tile.icon, 56.dp, Modifier.clip(RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp)))
+        val corner = if (c.isGlassy) 12.dp else 6.dp
+        if (tile.image != null) Artwork(tile.image, size = 56.dp, shape = RoundedCornerShape(topStart = corner, bottomStart = corner))
+        else GradientIcon(tile.colors, tile.icon, 56.dp, Modifier.clip(RoundedCornerShape(topStart = corner, bottomStart = corner)))
         Text(tile.title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontSize = 13.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp,
             modifier = Modifier.padding(horizontal = 10.dp))
     }
