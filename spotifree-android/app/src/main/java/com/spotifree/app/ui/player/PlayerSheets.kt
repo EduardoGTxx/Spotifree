@@ -88,6 +88,7 @@ import com.spotifree.app.ui.LocalActions
 import com.spotifree.app.ui.LocalGraph
 import com.spotifree.app.ui.MenuContext
 import com.spotifree.app.ui.common.Artwork
+import com.spotifree.app.ui.common.GlassDragHandle
 import com.spotifree.app.ui.common.MenuItem
 import com.spotifree.app.ui.common.SectionTitle
 import com.spotifree.app.ui.common.rememberTrackArtwork
@@ -125,14 +126,7 @@ fun QueueSheet(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         sheetState = sheet,
         shape = RoundedCornerShape(topStart = if (c.isGlassy) 28.dp else 16.dp, topEnd = if (c.isGlassy) 28.dp else 16.dp),
-        dragHandle = {
-            if (c.isGlassy) {
-                Box(
-                    Modifier.padding(vertical = 12.dp).size(width = 44.dp, height = 5.dp)
-                        .liquidGlass(isGlassy = true, shape = CircleShape, surfaceAlpha = 0.25f, borderAlpha = 0.60f, blurRadius = 4.dp, shadowElevation = 2.dp)
-                )
-            } else BottomSheetDefaults.DragHandle()
-        },
+        dragHandle = { GlassDragHandle() },
         containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0xF0121626) else c.elevated,
         contentColor = androidx.compose.ui.graphics.Color.White
     ) {
@@ -232,7 +226,13 @@ fun SleepTimerSheet(onDismiss: () -> Unit) {
             delay(1000)
         }
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0xF0121626) else c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(topStart = if (c.isGlassy) 28.dp else 16.dp, topEnd = if (c.isGlassy) 28.dp else 16.dp),
+        dragHandle = { GlassDragHandle() },
+        containerColor = if (c.isGlassy) Color(0xF0121626) else c.elevated,
+        contentColor = Color.White
+    ) {
         Column(Modifier.navigationBarsPadding()) {
             Text(t("sleepTimer"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 20.dp))
             when (state.sleepMode) {
@@ -268,7 +268,14 @@ fun EffectsSheet(onDismiss: () -> Unit) {
     fun update(f: (com.spotifree.app.data.prefs.AppSettings) -> com.spotifree.app.data.prefs.AppSettings) = scope.launch { graph.settings.update(f) }
     val chipColors = FilterChipDefaults.filterChipColors(selectedContainerColor = c.accent, selectedLabelColor = Color.Black)
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0xF0121626) else c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        shape = RoundedCornerShape(topStart = if (c.isGlassy) 28.dp else 16.dp, topEnd = if (c.isGlassy) 28.dp else 16.dp),
+        dragHandle = { GlassDragHandle() },
+        containerColor = if (c.isGlassy) Color(0xF0121626) else c.elevated,
+        contentColor = Color.White
+    ) {
         Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 20.dp)) {
             Text(t("audioEffects"), style = MaterialTheme.typography.titleLarge)
 
@@ -354,7 +361,14 @@ fun DevicesSheet(onDismiss: () -> Unit) {
     var name by remember { mutableStateOf(graph.account.account.value?.name?.takeIf { it.isNotBlank() } ?: android.os.Build.MODEL) }
     var code by remember { mutableStateOf("") }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0xF0121626) else c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        shape = RoundedCornerShape(topStart = if (c.isGlassy) 28.dp else 16.dp, topEnd = if (c.isGlassy) 28.dp else 16.dp),
+        dragHandle = { GlassDragHandle() },
+        containerColor = if (c.isGlassy) Color(0xF0121626) else c.elevated,
+        contentColor = Color.White
+    ) {
         Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 20.dp)) {
             Text(t("connectDevice"), style = MaterialTheme.typography.titleLarge)
             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {

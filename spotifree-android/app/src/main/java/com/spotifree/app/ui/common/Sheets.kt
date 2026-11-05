@@ -55,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -73,6 +74,32 @@ import com.spotifree.app.ui.theme.LocalSpotifreeColors
 import com.spotifree.app.ui.theme.glass.liquidGlass
 import androidx.compose.material3.BottomSheetDefaults
 import kotlinx.coroutines.launch
+
+/**
+ * Glassy drag handle capsule with specular border and soft shadow,
+ * falling back to Material 3's default drag handle on non-glassy themes.
+ */
+@Composable
+fun GlassDragHandle(modifier: Modifier = Modifier) {
+    val c = LocalSpotifreeColors.current
+    if (c.isGlassy) {
+        Box(
+            modifier
+                .padding(vertical = 12.dp)
+                .size(width = 44.dp, height = 5.dp)
+                .liquidGlass(
+                    isGlassy = true,
+                    shape = CircleShape,
+                    surfaceAlpha = 0.45f,
+                    borderAlpha = 0.60f,
+                    blurRadius = 4.dp,
+                    shadowElevation = 2.dp,
+                )
+        )
+    } else {
+        BottomSheetDefaults.DragHandle(modifier = modifier)
+    }
+}
 
 @Composable
 fun MenuItem(icon: ImageVector, text: String, tint: androidx.compose.ui.graphics.Color? = null, onClick: () -> Unit) {
@@ -107,14 +134,7 @@ fun TrackMenuSheet(track: Track, ctx: MenuContext, onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         sheetState = state,
         shape = RoundedCornerShape(topStart = if (c.isGlassy) 28.dp else 16.dp, topEnd = if (c.isGlassy) 28.dp else 16.dp),
-        dragHandle = {
-            if (c.isGlassy) {
-                Box(
-                    Modifier.padding(vertical = 12.dp).size(width = 44.dp, height = 5.dp)
-                        .liquidGlass(isGlassy = true, shape = CircleShape, surfaceAlpha = 0.25f, borderAlpha = 0.60f, blurRadius = 4.dp, shadowElevation = 2.dp)
-                )
-            } else BottomSheetDefaults.DragHandle()
-        },
+        dragHandle = { GlassDragHandle() },
         containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0xF0121626) else c.elevated,
         contentColor = androidx.compose.ui.graphics.Color.White
     ) {
@@ -186,7 +206,13 @@ fun AddToPlaylistSheet(tracks: List<Track>, onDismiss: () -> Unit) {
     var creating by remember { mutableStateOf(false) }
     val strings = com.spotifree.app.ui.i18n.LocalStrings.current
     val c = LocalSpotifreeColors.current
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(topStart = if (c.isGlassy) 28.dp else 16.dp, topEnd = if (c.isGlassy) 28.dp else 16.dp),
+        dragHandle = { GlassDragHandle() },
+        containerColor = if (c.isGlassy) Color(0xF0121626) else c.elevated,
+        contentColor = Color.White
+    ) {
         Text(t("addToPlaylist"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
         MenuItem(Icons.Default.Add, t("newPlaylist"), tint = c.accent) { creating = true }
         LazyColumn(Modifier.heightIn(max = 480.dp).navigationBarsPadding()) {

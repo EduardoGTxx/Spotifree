@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -57,6 +58,7 @@ import com.spotifree.app.ui.LocalActions
 import com.spotifree.app.ui.LocalGraph
 import com.spotifree.app.ui.SettingsRoute
 import com.spotifree.app.ui.common.Artwork
+import com.spotifree.app.ui.common.GlassDragHandle
 import com.spotifree.app.ui.i18n.LocalStrings
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
@@ -120,7 +122,21 @@ fun RecognitionSheet(onDismiss: () -> Unit) {
         }
     }
 
-    ModalBottomSheet(onDismissRequest = { job?.cancel(); onDismiss() }, containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0xF0121626) else c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
+    val triggerListening = {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            start()
+        } else {
+            permission.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = { job?.cancel(); onDismiss() },
+        shape = RoundedCornerShape(topStart = if (c.isGlassy) 28.dp else 16.dp, topEnd = if (c.isGlassy) 28.dp else 16.dp),
+        dragHandle = { GlassDragHandle() },
+        containerColor = if (c.isGlassy) Color(0xF0121626) else c.elevated,
+        contentColor = Color.White
+    ) {
         Column(
             Modifier.fillMaxWidth().navigationBarsPadding().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -135,33 +151,44 @@ fun RecognitionSheet(onDismiss: () -> Unit) {
             when (phase) {
                 "idle", "listening" -> {
                     Box(
-                        Modifier.size(144.dp).scale(scale).then(
-                            if (c.isGlassy) {
-                                Modifier.liquidGlass(
-                                    isGlassy = true,
-                                    shape = CircleShape,
-                                    accent = c.accent,
-                                    surfaceAlpha = 0.35f,
-                                    borderAlpha = 0.70f,
-                                    blurRadius = 24.dp,
-                                    shadowElevation = 20.dp,
-                                    interactive = true
-                                ).background(
-                                    Brush.radialGradient(
-                                        listOf(c.accent, c.accent.copy(alpha = 0.70f), Color.White.copy(alpha = 0.25f))
-                                    )
-                                )
-                            } else {
-                                Modifier.clip(CircleShape).background(c.accent)
-                            }
-                        ),
+                        Modifier
+                            .size(144.dp)
+                            .scale(scale)
+                            .then(
+                                if (c.isGlassy) {
+                                    Modifier
+                                        .liquidGlass(
+                                            isGlassy = true,
+                                            shape = CircleShape,
+                                            accent = c.accent,
+                                            surfaceAlpha = 0.28f,
+                                            borderAlpha = 0.65f,
+                                            shadowElevation = 16.dp,
+                                        )
+                                        .background(
+                                            Brush.radialGradient(
+                                                listOf(c.accent.copy(alpha = 0.85f), c.accent.copy(alpha = 0.45f))
+                                            )
+                                        )
+                                } else {
+                                    Modifier
+                                        .clip(CircleShape)
+                                        .background(c.accent)
+                                }
+                            )
+                            .clip(CircleShape)
+                            .clickable(enabled = phase == "idle", onClick = triggerListening),
                         contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Default.Mic, null, modifier = Modifier.size(56.dp), tint = androidx.compose.ui.graphics.Color.White) }
+                    ) {
+                        Icon(
+                            Icons.Default.Mic,
+                            contentDescription = null,
+                            modifier = Modifier.size(56.dp),
+                            tint = Color.White,
+                        )
+                    }
                     Text(if (phase == "idle") t("tapToListen") else t("listening"), color = c.textSecondary)
-                    if (phase == "idle") Button(onClick = {
-                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) start()
-                        else permission.launch(Manifest.permission.RECORD_AUDIO)
-                    }) { Text(t("startListening")) }
+                    if (phase == "idle") Button(onClick = triggerListening) { Text(t("startListening")) }
                 }
                 "identifying" -> {
                     CircularProgressIndicator(color = c.accent)
