@@ -225,9 +225,9 @@ fun HomeScreen(
                 item {
                     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(greeting, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { recognizing = true }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.GraphicEq, t("whatsPlaying")) }
-                        IconButton(onClick = { actions.nav.navigate(StatsRoute) }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.BarChart, t("statsTitle")) }
-                        IconButton(onClick = { actions.nav.navigate(SettingsRoute) }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Outlined.Settings, t("openSettings")) }
+                        IconButton(onClick = { recognizing = true }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.GraphicEq, t("whatsPlaying"), tint = Color.White) }
+                        IconButton(onClick = { actions.nav.navigate(StatsRoute) }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.BarChart, t("statsTitle"), tint = Color.White) }
+                        IconButton(onClick = { actions.nav.navigate(SettingsRoute) }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Outlined.Settings, t("openSettings"), tint = Color.White) }
                     }
                     if (settings.offlineMode) {
                         Row(
@@ -374,7 +374,7 @@ private fun QuickTile(tile: Tile, modifier: Modifier) {
         val corner = if (c.isGlassy) 12.dp else 6.dp
         if (tile.image != null) Artwork(tile.image, size = 56.dp, shape = RoundedCornerShape(topStart = corner, bottomStart = corner))
         else GradientIcon(tile.colors, tile.icon, 56.dp, Modifier.clip(RoundedCornerShape(topStart = corner, bottomStart = corner)))
-        Text(tile.title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontSize = 13.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp,
+        Text(tile.title, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, fontSize = 13.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp,
             modifier = Modifier.padding(horizontal = 10.dp))
     }
 }

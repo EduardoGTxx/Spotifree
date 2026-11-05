@@ -385,7 +385,7 @@ private fun BottomBar(tabs: List<Tab>, selected: (Tab) -> Boolean, onSelect: (Ta
             ) {
                 tabs.forEach { tab ->
                     val active = selected(tab)
-                    val tint = if (active) Color.White else Color.White.copy(alpha = 0.65f)
+                    val tint = if (active) Color.White else Color.White.copy(alpha = 0.70f)
                     Box(
                         modifier = Modifier
                             .weight(1f)

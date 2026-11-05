@@ -258,10 +258,10 @@ fun ShelfCard(
             if (onPlay != null) PlayFab(onPlay, Modifier.align(Alignment.BottomEnd).padding(8.dp), size = 38.dp)
         }
         Spacer(Modifier.height(8.dp))
-        Text(title, maxLines = if (subtitle.isNullOrBlank()) 2 else 1, overflow = TextOverflow.Ellipsis, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+        Text(title, color = Color.White, maxLines = if (subtitle.isNullOrBlank()) 2 else 1, overflow = TextOverflow.Ellipsis, fontSize = 13.sp, fontWeight = FontWeight.Bold,
             textAlign = if (circle) TextAlign.Center else TextAlign.Start, modifier = Modifier.fillMaxWidth())
         if (!subtitle.isNullOrBlank()) {
-            Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 12.sp, color = c.textSecondary,
+            Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 12.sp, color = if (c.isGlassy) Color.White.copy(alpha = 0.75f) else c.textSecondary,
                 textAlign = if (circle) TextAlign.Center else TextAlign.Start, modifier = Modifier.fillMaxWidth().padding(top = 2.dp))
         }
     }

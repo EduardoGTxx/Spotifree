@@ -106,18 +106,18 @@ fun MiniPlayer(onOpen: () -> Unit) {
                 Artwork(artworkUrl, size = 44.dp, shape = RoundedCornerShape(if (c.isGlassy) 14.dp else 6.dp))
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium,
+                    Text(track.title, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.basicMarquee(iterations = 2, initialDelayMillis = 2500))
-                    Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
+                    Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall)
                 }
                 // Previous app: devices button right in the mini player
                 IconButton(onClick = { devices = true }, modifier = Modifier.glassyButton(c.isGlassy, size = 36.dp)) {
                     Icon(if (state.isCasting) Icons.Default.Cast else Icons.Default.Devices, null,
-                        tint = if (state.isCasting) c.accent else Color.White.copy(alpha = 0.85f), modifier = Modifier.size(22.dp))
+                        tint = if (state.isCasting) c.accent else Color.White, modifier = Modifier.size(22.dp))
                 }
                 IconButton(onClick = { actions.toggleLike(track) }, modifier = Modifier.glassyButton(c.isGlassy, size = 36.dp)) {
                     val isLiked = track.id in liked
-                    Icon(if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (isLiked) c.accent else Color.White)
+                    Icon(if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (isLiked) c.accent else Color.White, modifier = Modifier.size(22.dp))
                 }
                 IconButton(onClick = { graph.player.togglePlay() }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) {
                     if (state.isBuffering && state.isPlaying.not()) {

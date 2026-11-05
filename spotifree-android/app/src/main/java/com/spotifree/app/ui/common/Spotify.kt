@@ -49,7 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
 import com.spotifree.app.ui.theme.glass.liquidGlass
-import com.spotifree.app.ui.theme.glass.liquidGlassCard
+
 import com.spotifree.app.ui.theme.onColor
 
 /*
@@ -215,29 +215,41 @@ fun GradientIcon(colors: List<Color>, icon: ImageVector, size: Dp, modifier: Mod
 fun CategoryCard(title: String, color: Color, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val c = LocalSpotifreeColors.current
     val shape = RoundedCornerShape(if (c.isGlassy) 16.dp else 8.dp)
-    Box(
-        modifier.height(100.dp)
-            .then(
-                if (c.isGlassy) {
-                    Modifier
-                        .liquidGlassCard(
-                            isGlassy = true,
-                            shape = shape,
-                            accent = color,
-                            surfaceAlpha = 0.22f,
-                            borderAlpha = 0.50f,
-                            shadowElevation = 8.dp,
-                            interactive = true
-                        )
-                        .background(Brush.linearGradient(listOf(color.copy(alpha = 0.55f), color.copy(alpha = 0.25f))))
-                } else {
-                    Modifier.clip(shape).background(Brush.linearGradient(listOf(color, color.copy(red = color.red * 0.8f, green = color.green * 0.8f, blue = color.blue * 0.8f))))
-                }
+    val cardModifier = if (c.isGlassy) {
+        val spotColor = color.copy(alpha = 0.35f)
+        val glassBrush = Brush.verticalGradient(
+            colors = listOf(
+                Color.White.copy(alpha = 0.50f),
+                Color.White.copy(alpha = 0.22f),
+                Color.White.copy(alpha = 0.06f),
+                color.copy(alpha = 0.35f)
             )
+        )
+        Modifier
+            .shadow(8.dp, shape, spotColor = spotColor, ambientColor = spotColor)
+            .clip(shape)
+            .background(Brush.linearGradient(listOf(color.copy(alpha = 0.55f), color.copy(alpha = 0.25f))))
+            .border(1.dp, glassBrush, shape)
+    } else {
+        Modifier
+            .clip(shape)
+            .background(Brush.linearGradient(listOf(color, color.copy(red = color.red * 0.8f, green = color.green * 0.8f, blue = color.blue * 0.8f))))
+    }
+    Box(
+        modifier
+            .height(100.dp)
+            .then(cardModifier)
             .clickable(onClick = onClick),
     ) {
-        Text(title, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(12.dp).padding(end = 40.dp))
+        Text(
+            title,
+            color = Color.White,
+            fontWeight = FontWeight.ExtraBold,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(12.dp).padding(end = 40.dp)
+        )
         Box(
             Modifier.align(Alignment.BottomEnd).offset(x = 10.dp, y = 6.dp).rotate(25f).size(62.dp)
                 .shadow(6.dp, RoundedCornerShape(6.dp)).clip(RoundedCornerShape(6.dp))
