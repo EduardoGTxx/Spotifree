@@ -66,6 +66,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -91,6 +93,8 @@ import com.spotifree.app.ui.common.SectionTitle
 import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glass.liquidGlass
+import androidx.compose.material3.BottomSheetDefaults
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -117,7 +121,21 @@ fun QueueSheet(onDismiss: () -> Unit) {
         state.queue.forEachIndexed { i, t -> if (i > state.queueIndex) upcoming += i to t }
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0xF0121626) else c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheet,
+        shape = RoundedCornerShape(topStart = if (c.isGlassy) 28.dp else 16.dp, topEnd = if (c.isGlassy) 28.dp else 16.dp),
+        dragHandle = {
+            if (c.isGlassy) {
+                Box(
+                    Modifier.padding(vertical = 12.dp).size(width = 44.dp, height = 5.dp)
+                        .liquidGlass(isGlassy = true, shape = CircleShape, surfaceAlpha = 0.25f, borderAlpha = 0.60f, blurRadius = 4.dp, shadowElevation = 2.dp)
+                )
+            } else BottomSheetDefaults.DragHandle()
+        },
+        containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0xF0121626) else c.elevated,
+        contentColor = androidx.compose.ui.graphics.Color.White
+    ) {
         Column(Modifier.navigationBarsPadding()) {
             state.current?.let { cur ->
                 Text(t("nowPlaying"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp))

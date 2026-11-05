@@ -60,6 +60,7 @@ import com.spotifree.app.ui.common.Artwork
 import com.spotifree.app.ui.i18n.LocalStrings
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glass.liquidGlass
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -134,7 +135,26 @@ fun RecognitionSheet(onDismiss: () -> Unit) {
             when (phase) {
                 "idle", "listening" -> {
                     Box(
-                        Modifier.size(140.dp).scale(scale).then(if (c.isGlassy) Modifier.shadow(16.dp, CircleShape, spotColor = c.accent.copy(alpha = 0.5f)).clip(CircleShape).background(androidx.compose.ui.graphics.Brush.radialGradient(listOf(c.accent, c.accent.copy(alpha = 0.65f)))).border(2.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.2f))), CircleShape) else Modifier.clip(CircleShape).background(c.accent)),
+                        Modifier.size(144.dp).scale(scale).then(
+                            if (c.isGlassy) {
+                                Modifier.liquidGlass(
+                                    isGlassy = true,
+                                    shape = CircleShape,
+                                    accent = c.accent,
+                                    surfaceAlpha = 0.35f,
+                                    borderAlpha = 0.70f,
+                                    blurRadius = 24.dp,
+                                    shadowElevation = 20.dp,
+                                    interactive = true
+                                ).background(
+                                    Brush.radialGradient(
+                                        listOf(c.accent, c.accent.copy(alpha = 0.70f), Color.White.copy(alpha = 0.25f))
+                                    )
+                                )
+                            } else {
+                                Modifier.clip(CircleShape).background(c.accent)
+                            }
+                        ),
                         contentAlignment = Alignment.Center,
                     ) { Icon(Icons.Default.Mic, null, modifier = Modifier.size(56.dp), tint = androidx.compose.ui.graphics.Color.White) }
                     Text(if (phase == "idle") t("tapToListen") else t("listening"), color = c.textSecondary)
