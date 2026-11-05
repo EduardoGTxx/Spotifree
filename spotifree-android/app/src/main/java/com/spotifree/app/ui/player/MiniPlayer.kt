@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cast
@@ -50,6 +51,7 @@ import com.spotifree.app.ui.LocalGraph
 import com.spotifree.app.ui.common.Artwork
 import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glass.liquidGlass
 import com.spotifree.app.ui.theme.glassyButton
 
 @Composable
@@ -64,26 +66,30 @@ fun MiniPlayer(onOpen: () -> Unit) {
     val artworkUrl = rememberTrackArtwork(track)
     val coverBg by rememberCoverColor(artworkUrl, c.elevated)
     val bg = if (c.isGlassy) Color.White.copy(alpha = 0.16f) else coverBg
-    val shape = RoundedCornerShape(if (c.isGlassy) 20.dp else 8.dp)
+    val shape = RoundedCornerShape(if (c.isGlassy) 26.dp else 8.dp)
     val drag = remember { mutableFloatStateOf(0f) }
     var devices by remember { mutableStateOf(false) }
-    Box(Modifier.padding(horizontal = if (c.isGlassy) 12.dp else 8.dp, vertical = 4.dp)) {
+    Box(Modifier.padding(horizontal = if (c.isGlassy) 16.dp else 8.dp, vertical = 6.dp)) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .shadow(if (c.isGlassy) 16.dp else 10.dp, shape, spotColor = if (c.isGlassy) c.accent.copy(alpha = 0.4f) else Color.Black)
-                .clip(shape)
-                .background(bg)
                 .then(
                     if (c.isGlassy) {
-                        Modifier.border(
-                            1.dp,
-                            Brush.verticalGradient(
-                                listOf(Color.White.copy(alpha = 0.50f), Color.White.copy(alpha = 0.12f))
-                            ),
-                            shape
+                        Modifier.liquidGlass(
+                            isGlassy = true,
+                            shape = shape,
+                            accent = c.accent,
+                            surfaceAlpha = 0.22f,
+                            borderAlpha = 0.58f,
+                            blurRadius = 22.dp,
+                            shadowElevation = 14.dp
                         )
-                    } else Modifier
+                    } else {
+                        Modifier
+                            .shadow(10.dp, shape, spotColor = Color.Black)
+                            .clip(shape)
+                            .background(bg)
+                    }
                 )
                 .clickable(onClick = onOpen)
                 .pointerInput(Unit) {
@@ -125,9 +131,13 @@ fun MiniPlayer(onOpen: () -> Unit) {
             if (devices) DevicesSheet(onDismiss = { devices = false })
             LinearProgressIndicator(
                 progress = { progress },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp).height(2.dp),
-                color = Color.White,
-                trackColor = Color.White.copy(alpha = 0.2f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp)
+                    .height(if (c.isGlassy) 3.dp else 2.dp)
+                    .clip(CircleShape),
+                color = if (c.isGlassy) c.accent else Color.White,
+                trackColor = Color.White.copy(alpha = 0.18f),
                 drawStopIndicator = {},
             )
         }

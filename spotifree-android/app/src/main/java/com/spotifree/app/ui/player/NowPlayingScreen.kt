@@ -91,6 +91,7 @@ import com.spotifree.app.ui.common.formatMs
 import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glass.liquidGlass
 import com.spotifree.app.ui.theme.glassyButton
 import com.spotifree.app.ui.theme.onColor
 
@@ -195,7 +196,7 @@ fun NowPlayingScreen(onClose: () -> Unit) {
 private fun CoverArt(url: String?, onSwipe: (Float) -> Unit) {
     val drag = remember { mutableFloatStateOf(0f) }
     val c = LocalSpotifreeColors.current
-    val shape = RoundedCornerShape(if (c.isGlassy) 24.dp else 8.dp)
+    val shape = RoundedCornerShape(if (c.isGlassy) 28.dp else 8.dp)
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         val side = minOf(maxWidth, maxHeight)
         Artwork(
@@ -301,32 +302,22 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
         if (c.isGlassy) {
             Box(
                 Modifier
-                    .size(72.dp)
-                    .shadow(16.dp, CircleShape, spotColor = c.accent.copy(alpha = 0.5f))
-                    .clip(CircleShape)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.28f),
-                                Color.White.copy(alpha = 0.14f)
-                            )
-                        )
-                    )
-                    .border(
-                        1.5.dp,
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.70f),
-                                Color.White.copy(alpha = 0.20f)
-                            )
-                        ),
-                        CircleShape
+                    .size(76.dp)
+                    .liquidGlass(
+                        isGlassy = true,
+                        shape = CircleShape,
+                        accent = c.accent,
+                        surfaceAlpha = 0.30f,
+                        borderAlpha = 0.75f,
+                        blurRadius = 24.dp,
+                        shadowElevation = 18.dp,
+                        interactive = true
                     ),
                 contentAlignment = Alignment.Center,
             ) {
                 IconButton(onClick = { graph.player.togglePlay() }, modifier = Modifier.fillMaxSize()) {
-                    if (state.isBuffering) CircularProgressIndicator(Modifier.size(32.dp), color = Color.White, strokeWidth = 3.dp)
-                    else Icon(if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.size(42.dp))
+                    if (state.isBuffering) CircularProgressIndicator(Modifier.size(34.dp), color = Color.White, strokeWidth = 3.dp)
+                    else Icon(if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.size(44.dp))
                 }
             }
         } else {

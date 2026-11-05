@@ -265,13 +265,25 @@ fun SeekBar(fraction: Float, onPreview: (Float?) -> Unit, onSeek: (Float) -> Uni
             },
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(Modifier.fillMaxWidth().height(14.dp)) {
+        val c = LocalSpotifreeColors.current
+        Canvas(Modifier.fillMaxWidth().height(16.dp)) {
             val y = size.height / 2
-            val stroke = if (dragging) 6.dp.toPx() else 4.dp.toPx()
-            drawLine(color.copy(alpha = 0.25f), Offset(0f, y), Offset(size.width, y), stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            val isGlassy = c.isGlassy
+            val trackStroke = if (isGlassy) (if (dragging) 7.dp.toPx() else 5.dp.toPx()) else (if (dragging) 6.dp.toPx() else 4.dp.toPx())
+            val trackColor = if (isGlassy) Color.White.copy(alpha = 0.22f) else color.copy(alpha = 0.25f)
+            val activeColor = if (isGlassy) c.accent else color
+            drawLine(trackColor, Offset(0f, y), Offset(size.width, y), trackStroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
             val x = size.width * shown
-            drawLine(color, Offset(0f, y), Offset(x, y), stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
-            drawCircle(color, radius = if (dragging) 8.dp.toPx() else 6.dp.toPx(), center = Offset(x, y))
+            drawLine(activeColor, Offset(0f, y), Offset(x, y), trackStroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            if (isGlassy) {
+                // Crystal glass bead thumb with rim highlight
+                val thumbR = if (dragging) 10.dp.toPx() else 7.5.dp.toPx()
+                drawCircle(c.accent.copy(alpha = 0.45f), radius = thumbR + 3.dp.toPx(), center = Offset(x, y))
+                drawCircle(Color.White, radius = thumbR, center = Offset(x, y))
+                drawCircle(c.accent, radius = thumbR * 0.42f, center = Offset(x, y))
+            } else {
+                drawCircle(color, radius = if (dragging) 8.dp.toPx() else 6.dp.toPx(), center = Offset(x, y))
+            }
         }
     }
 }
