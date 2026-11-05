@@ -292,6 +292,7 @@ class BackupManager(
             put("amoledTheme", s.amoledTheme)
             put("uiTheme", s.uiTheme)
             put("isOfflineMode", s.offlineMode)
+            put("allowMobileData", s.allowMobileData)
             put("recognitionProvider", s.recognitionProvider)
             put("recognitionApiKey", s.recognitionApiKey)
             put("jamServerUrl", s.jamServerUrl)
@@ -328,6 +329,7 @@ class BackupManager(
             amoledTheme = o.b("amoledTheme") ?: s.amoledTheme,
             uiTheme = o.s("uiTheme")?.takeIf { it in listOf("default", "glassy") } ?: s.uiTheme,
             offlineMode = o.b("isOfflineMode") ?: s.offlineMode,
+            allowMobileData = o.b("allowMobileData") ?: s.allowMobileData,
             recognitionProvider = o.s("recognitionProvider") ?: s.recognitionProvider,
             recognitionApiKey = o.s("recognitionApiKey") ?: s.recognitionApiKey,
             jamServerUrl = o.s("jamServerUrl") ?: s.jamServerUrl,

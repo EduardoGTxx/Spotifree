@@ -274,25 +274,6 @@ fun MainScreen(activity: MainActivity) {
     val destination = backStack?.destination
 
     CompositionLocalProvider(LocalActions provides actions) {
-        val baseBg = Color(0xFF090B14)
-        val topOpaque = Color(
-            red = c.accent.red * 0.45f + baseBg.red * 0.55f,
-            green = c.accent.green * 0.45f + baseBg.green * 0.55f,
-            blue = c.accent.blue * 0.45f + baseBg.blue * 0.55f,
-            alpha = 1f
-        )
-        val midOpaque = Color(
-            red = c.accent.red * 0.24f + baseBg.red * 0.76f,
-            green = c.accent.green * 0.24f + baseBg.green * 0.76f,
-            blue = c.accent.blue * 0.24f + baseBg.blue * 0.76f,
-            alpha = 1f
-        )
-        val bottomOpaque = Color(
-            red = c.accent.red * 0.14f + baseBg.red * 0.86f,
-            green = c.accent.green * 0.14f + baseBg.green * 0.86f,
-            blue = c.accent.blue * 0.14f + baseBg.blue * 0.86f,
-            alpha = 1f
-        )
         Box(
             Modifier
                 .fillMaxSize()
@@ -300,7 +281,7 @@ fun MainScreen(activity: MainActivity) {
                     if (c.isGlassy) {
                         Modifier.background(
                             Brush.verticalGradient(
-                                colors = listOf(topOpaque, midOpaque, bottomOpaque, baseBg)
+                                colors = com.spotifree.app.ui.theme.glassyGradient(c.accent)
                             )
                         )
                     } else {

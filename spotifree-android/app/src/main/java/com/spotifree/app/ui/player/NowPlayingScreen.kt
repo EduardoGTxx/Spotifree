@@ -123,31 +123,12 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
-            val baseBg = Color(0xFF090B14)
-            val topOpaque = Color(
-                red = c.accent.red * 0.45f + baseBg.red * 0.55f,
-                green = c.accent.green * 0.45f + baseBg.green * 0.55f,
-                blue = c.accent.blue * 0.45f + baseBg.blue * 0.55f,
-                alpha = 1f
-            )
-            val midOpaque = Color(
-                red = c.accent.red * 0.24f + baseBg.red * 0.76f,
-                green = c.accent.green * 0.24f + baseBg.green * 0.76f,
-                blue = c.accent.blue * 0.24f + baseBg.blue * 0.76f,
-                alpha = 1f
-            )
-            val bottomOpaque = Color(
-                red = c.accent.red * 0.14f + baseBg.red * 0.86f,
-                green = c.accent.green * 0.14f + baseBg.green * 0.86f,
-                blue = c.accent.blue * 0.14f + baseBg.blue * 0.86f,
-                alpha = 1f
-            )
             Box(
                 Modifier
                     .fillMaxSize()
                     .background(
                         if (c.isGlassy) {
-                            Brush.verticalGradient(listOf(topOpaque, midOpaque, bottomOpaque, baseBg))
+                            Brush.verticalGradient(com.spotifree.app.ui.theme.glassyGradient(c.accent))
                         } else {
                             Brush.verticalGradient(listOf(animated, if (c.amoled) Color.Black else c.background))
                         }

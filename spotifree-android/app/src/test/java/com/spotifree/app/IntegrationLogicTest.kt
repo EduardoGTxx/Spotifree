@@ -238,6 +238,7 @@ class IntegrationLogicTest {
     fun bluetoothResumeReceiverOnlyResumesOnConnectedState() {
         val a2dp = android.bluetooth.BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED
         val headset = android.bluetooth.BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED
+        assertTrue(com.spotifree.app.playback.BluetoothResumeReceiver.shouldResume(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED, -1))
         assertTrue(com.spotifree.app.playback.BluetoothResumeReceiver.shouldResume(a2dp, android.bluetooth.BluetoothProfile.STATE_CONNECTED))
         assertTrue(com.spotifree.app.playback.BluetoothResumeReceiver.shouldResume(headset, android.bluetooth.BluetoothProfile.STATE_CONNECTED))
         assertFalse(com.spotifree.app.playback.BluetoothResumeReceiver.shouldResume(a2dp, android.bluetooth.BluetoothProfile.STATE_DISCONNECTED))
@@ -251,6 +252,7 @@ class IntegrationLogicTest {
         val original = com.spotifree.app.data.prefs.AppSettings(
             language = "en",
             offlineMode = true,
+            allowMobileData = true,
             recognitionProvider = "acrcloud",
             recognitionApiKey = "host|key|secret",
             jamServerUrl = "wss://jam.example/ws",

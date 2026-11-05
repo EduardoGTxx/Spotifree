@@ -1,6 +1,7 @@
 package com.spotifree.app.playback
 
 import android.bluetooth.BluetoothA2dp
+import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothHeadset
 import android.bluetooth.BluetoothProfile
 import android.content.BroadcastReceiver
@@ -22,8 +23,9 @@ class BluetoothResumeReceiver : BroadcastReceiver() {
 
     companion object {
         internal fun shouldResume(action: String?, state: Int): Boolean =
-            (action == BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED ||
-                action == BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED) &&
-                state == BluetoothProfile.STATE_CONNECTED
+            action == BluetoothDevice.ACTION_ACL_CONNECTED ||
+                ((action == BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED ||
+                    action == BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED) &&
+                    state == BluetoothProfile.STATE_CONNECTED)
     }
 }

@@ -63,6 +63,31 @@ fun parseColor(hex: String, fallback: Color = Color(0xFF2979FF)): Color = runCat
 }.getOrDefault(fallback)
 
 /** Readable text colour on top of [c]. */
+
+/** Opaque gradient colors blending [accent] over base #090B14 for the Glassy theme. */
+fun glassyGradient(accent: Color): List<Color> {
+    val baseBg = Color(0xFF090B14)
+    val topOpaque = Color(
+        red = accent.red * 0.45f + baseBg.red * 0.55f,
+        green = accent.green * 0.45f + baseBg.green * 0.55f,
+        blue = accent.blue * 0.45f + baseBg.blue * 0.55f,
+        alpha = 1f
+    )
+    val midOpaque = Color(
+        red = accent.red * 0.24f + baseBg.red * 0.76f,
+        green = accent.green * 0.24f + baseBg.green * 0.76f,
+        blue = accent.blue * 0.24f + baseBg.blue * 0.76f,
+        alpha = 1f
+    )
+    val bottomOpaque = Color(
+        red = accent.red * 0.14f + baseBg.red * 0.86f,
+        green = accent.green * 0.14f + baseBg.green * 0.86f,
+        blue = accent.blue * 0.14f + baseBg.blue * 0.86f,
+        alpha = 1f
+    )
+    return listOf(topOpaque, midOpaque, bottomOpaque, baseBg)
+}
+
 fun onColor(c: Color): Color {
     val l = 0.299 * c.red + 0.587 * c.green + 0.114 * c.blue
     return if (l > 0.6) Color.Black else Color.White

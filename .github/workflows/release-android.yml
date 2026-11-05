@@ -6,14 +6,12 @@ name: Release Android
 # - Manual desde Actions › Release Android › Run workflow.
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*.*.*'
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag de la versión (vX.Y.Z). Opcional si se ejecuta desde main."
+        description: "Tag de la versión (vX.Y.Z)."
         required: false
 
 permissions:
