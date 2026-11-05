@@ -94,6 +94,8 @@ import com.spotifree.app.ui.common.TrackRow
 import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glassyButton
+import com.spotifree.app.ui.theme.glassyCard
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -222,13 +224,13 @@ fun HomeScreen(
                 item {
                     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(greeting, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { recognizing = true }) { Icon(Icons.Default.GraphicEq, t("whatsPlaying")) }
-                        IconButton(onClick = { actions.nav.navigate(StatsRoute) }) { Icon(Icons.Default.BarChart, t("statsTitle")) }
-                        IconButton(onClick = { actions.nav.navigate(SettingsRoute) }) { Icon(Icons.Outlined.Settings, t("openSettings")) }
+                        IconButton(onClick = { recognizing = true }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.GraphicEq, t("whatsPlaying")) }
+                        IconButton(onClick = { actions.nav.navigate(StatsRoute) }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.BarChart, t("statsTitle")) }
+                        IconButton(onClick = { actions.nav.navigate(SettingsRoute) }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Outlined.Settings, t("openSettings")) }
                     }
                     if (settings.offlineMode) {
                         Row(
-                            Modifier.padding(16.dp, 8.dp).fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(c.elevated).padding(12.dp),
+                            Modifier.padding(16.dp, 8.dp).fillMaxWidth().glassyCard(c.isGlassy, RoundedCornerShape(12.dp)).background(if (c.isGlassy) Color.Transparent else c.elevated).padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(Icons.Default.CloudOff, null, tint = c.accent)

@@ -8,6 +8,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -115,7 +119,7 @@ fun RecognitionSheet(onDismiss: () -> Unit) {
         }
     }
 
-    ModalBottomSheet(onDismissRequest = { job?.cancel(); onDismiss() }, containerColor = c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
+    ModalBottomSheet(onDismissRequest = { job?.cancel(); onDismiss() }, containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0xF0121626) else c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
         Column(
             Modifier.fillMaxWidth().navigationBarsPadding().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -130,7 +134,7 @@ fun RecognitionSheet(onDismiss: () -> Unit) {
             when (phase) {
                 "idle", "listening" -> {
                     Box(
-                        Modifier.size(140.dp).scale(scale).clip(CircleShape).background(c.accent),
+                        Modifier.size(140.dp).scale(scale).then(if (c.isGlassy) Modifier.shadow(16.dp, CircleShape, spotColor = c.accent.copy(alpha = 0.5f)).clip(CircleShape).background(androidx.compose.ui.graphics.Brush.radialGradient(listOf(c.accent, c.accent.copy(alpha = 0.65f)))).border(2.dp, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.2f))), CircleShape) else Modifier.clip(CircleShape).background(c.accent)),
                         contentAlignment = Alignment.Center,
                     ) { Icon(Icons.Default.Mic, null, modifier = Modifier.size(56.dp), tint = androidx.compose.ui.graphics.Color.White) }
                     Text(if (phase == "idle") t("tapToListen") else t("listening"), color = c.textSecondary)

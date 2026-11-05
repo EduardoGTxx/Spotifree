@@ -274,71 +274,18 @@ fun MainScreen(activity: MainActivity) {
     val destination = backStack?.destination
 
     CompositionLocalProvider(LocalActions provides actions) {
+        val glassyWave = if (c.isGlassy) com.spotifree.app.ui.theme.rememberGlassyWaveBrush(c.accent) else null
         Box(
             Modifier
                 .fillMaxSize()
                 .then(
-                    if (c.isGlassy) {
-                        Modifier.background(
-                            Brush.verticalGradient(
-                                colors = com.spotifree.app.ui.theme.glassyGradient(c.accent)
-                            )
-                        )
+                    if (c.isGlassy && glassyWave != null) {
+                        Modifier.background(glassyWave)
                     } else {
                         Modifier.background(c.background)
                     }
                 )
         ) {
-            if (c.isGlassy) {
-                Canvas(Modifier.fillMaxSize()) {
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(c.accent.copy(alpha = 0.25f), Color.Transparent),
-                            center = Offset(size.width * 0.15f, size.height * 0.82f),
-                            radius = size.width * 0.90f
-                        )
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 110.dp),
-                    contentAlignment = Alignment.TopCenter
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(280.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.radialGradient(
-                                    colors = listOf(
-                                        c.accent.copy(alpha = 0.45f),
-                                        c.accent.copy(alpha = 0.20f),
-                                        Color.Transparent
-                                    )
-                                )
-                            )
-                            .border(
-                                width = 1.dp,
-                                brush = Brush.radialGradient(
-                                    colors = listOf(
-                                        Color.White.copy(alpha = 0.35f),
-                                        Color.White.copy(alpha = 0.08f)
-                                    )
-                                ),
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_spotifree_logo),
-                            contentDescription = "Spotifree",
-                            modifier = Modifier.size(170.dp),
-                            alpha = 0.35f
-                        )
-                    }
-                }
-            }
             Scaffold(
                 containerColor = if (c.isGlassy) Color.Transparent else c.background,
                 // Screens draw behind the status bar themselves (header gradients); see [Inset]

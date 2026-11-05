@@ -50,6 +50,7 @@ import com.spotifree.app.ui.LocalGraph
 import com.spotifree.app.ui.common.Artwork
 import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glassyButton
 
 @Composable
 fun MiniPlayer(onOpen: () -> Unit) {
@@ -104,15 +105,15 @@ fun MiniPlayer(onOpen: () -> Unit) {
                     Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
                 }
                 // Previous app: devices button right in the mini player
-                IconButton(onClick = { devices = true }) {
+                IconButton(onClick = { devices = true }, modifier = Modifier.glassyButton(c.isGlassy, size = 36.dp)) {
                     Icon(if (state.isCasting) Icons.Default.Cast else Icons.Default.Devices, null,
                         tint = if (state.isCasting) c.accent else Color.White.copy(alpha = 0.85f), modifier = Modifier.size(22.dp))
                 }
-                IconButton(onClick = { actions.toggleLike(track) }) {
+                IconButton(onClick = { actions.toggleLike(track) }, modifier = Modifier.glassyButton(c.isGlassy, size = 36.dp)) {
                     val isLiked = track.id in liked
                     Icon(if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (isLiked) c.accent else Color.White)
                 }
-                IconButton(onClick = { graph.player.togglePlay() }) {
+                IconButton(onClick = { graph.player.togglePlay() }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) {
                     if (state.isBuffering && state.isPlaying.not()) {
                         CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = Color.White)
                     } else {

@@ -1,5 +1,25 @@
 package com.spotifree.app.ui.theme
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+
 import com.spotifree.app.util.runCatchingCancellable
 
 import androidx.compose.material3.MaterialTheme
@@ -86,6 +106,118 @@ fun glassyGradient(accent: Color): List<Color> {
         alpha = 1f
     )
     return listOf(topOpaque, midOpaque, bottomOpaque, baseBg)
+}
+
+
+/**
+ * Animated musical wave gradient brush: simulates acoustic wave motion (oscillating between dark and lighter
+ * accent tones) with fluid harmonic pulses. Completely flat without static background figures or logos.
+ */
+@Composable
+fun rememberGlassyWaveBrush(accent: Color): Brush {
+    val transition = rememberInfiniteTransition(label = "musicWave")
+    val waveOffset by transition.animateFloat(
+        initialValue = 0.20f,
+        targetValue = 0.70f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "waveOffset"
+    )
+    val waveHarmonic by transition.animateFloat(
+        initialValue = 0.50f,
+        targetValue = 0.90f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 5200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "waveHarmonic"
+    )
+    val waveBrightness by transition.animateFloat(
+        initialValue = 0.32f,
+        targetValue = 0.60f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "waveBrightness"
+    )
+
+    val baseBg = Color(0xFF080A12)
+    val topColor = Color(
+        red = accent.red * waveBrightness + baseBg.red * (1f - waveBrightness),
+        green = accent.green * waveBrightness + baseBg.green * (1f - waveBrightness),
+        blue = accent.blue * waveBrightness + baseBg.blue * (1f - waveBrightness),
+        alpha = 1f
+    )
+    val midColor = Color(
+        red = accent.red * (waveBrightness * 0.55f) + baseBg.red * (1f - waveBrightness * 0.55f),
+        green = accent.green * (waveBrightness * 0.55f) + baseBg.green * (1f - waveBrightness * 0.55f),
+        blue = accent.blue * (waveBrightness * 0.55f) + baseBg.blue * (1f - waveBrightness * 0.55f),
+        alpha = 1f
+    )
+    val lowColor = Color(
+        red = accent.red * 0.12f + baseBg.red * 0.88f,
+        green = accent.green * 0.12f + baseBg.green * 0.88f,
+        blue = accent.blue * 0.12f + baseBg.blue * 0.88f,
+        alpha = 1f
+    )
+
+    return Brush.verticalGradient(
+        colorStops = arrayOf(
+            0.0f to topColor,
+            waveOffset to midColor,
+            waveHarmonic to lowColor,
+            1.0f to baseBg
+        )
+    )
+}
+
+/** Glassy card modifier: translucent white surface, crisp gradient glass border, and soft glowing shadow. */
+fun Modifier.glassyCard(
+    isGlassy: Boolean,
+    shape: Shape = RoundedCornerShape(14.dp),
+    accent: Color = Color.Transparent,
+    alpha: Float = 0.14f,
+    borderAlpha: Float = 0.35f,
+    shadowElevation: Dp = 6.dp,
+): Modifier = if (isGlassy) {
+    this
+        .shadow(shadowElevation, shape, spotColor = if (accent != Color.Transparent) accent.copy(alpha = 0.25f) else Color.Black)
+        .clip(shape)
+        .background(Color.White.copy(alpha = alpha))
+        .border(
+            1.dp,
+            Brush.verticalGradient(
+                listOf(Color.White.copy(alpha = borderAlpha), Color.White.copy(alpha = borderAlpha * 0.35f))
+            ),
+            shape
+        )
+} else {
+    this
+}
+
+/** Glassy circular button modifier: frosted translucent circular container with glass border and soft shadow. */
+fun Modifier.glassyButton(
+    isGlassy: Boolean,
+    size: Dp = 40.dp,
+    accent: Color = Color.Transparent,
+): Modifier = if (isGlassy) {
+    this
+        .size(size)
+        .shadow(4.dp, CircleShape, spotColor = if (accent != Color.Transparent) accent.copy(alpha = 0.35f) else Color.Black)
+        .clip(CircleShape)
+        .background(Color.White.copy(alpha = 0.14f))
+        .border(
+            1.dp,
+            Brush.verticalGradient(
+                listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.15f))
+            ),
+            CircleShape
+        )
+} else {
+    this
 }
 
 fun onColor(c: Color): Color {

@@ -64,6 +64,8 @@ fun UpdateDialog(update: AppUpdate, onDismiss: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     AlertDialog(
         onDismissRequest = { if (progress < 0f) onDismiss() },
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(if (LocalSpotifreeColors.current.isGlassy) 20.dp else 16.dp),
+        containerColor = if (LocalSpotifreeColors.current.isGlassy) androidx.compose.ui.graphics.Color(0xF0141829) else MaterialTheme.colorScheme.surface,
         title = { Text(strings["updateAvailable"] + " · v" + update.version) },
         text = {
             Column {

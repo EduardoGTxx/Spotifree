@@ -91,6 +91,7 @@ import com.spotifree.app.ui.common.formatMs
 import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glassyButton
 import com.spotifree.app.ui.theme.onColor
 
 private enum class PlayerSheet { NONE, QUEUE, SLEEP, EFFECTS, DEVICES }
@@ -123,12 +124,13 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
+            val npGlassyWave = if (c.isGlassy) com.spotifree.app.ui.theme.rememberGlassyWaveBrush(c.accent) else null
             Box(
                 Modifier
                     .fillMaxSize()
                     .background(
-                        if (c.isGlassy) {
-                            Brush.verticalGradient(com.spotifree.app.ui.theme.glassyGradient(c.accent))
+                        if (c.isGlassy && npGlassyWave != null) {
+                            npGlassyWave
                         } else {
                             Brush.verticalGradient(listOf(animated, if (c.amoled) Color.Black else c.background))
                         }
@@ -145,65 +147,15 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                     .statusBarsPadding()
                     .navigationBarsPadding(),
             ) {
-                if (c.isGlassy) {
-                    Canvas(Modifier.fillMaxSize()) {
-                        drawCircle(
-                            brush = Brush.radialGradient(
-                                colors = listOf(c.accent.copy(alpha = 0.25f), Color.Transparent),
-                                center = Offset(size.width * 0.15f, size.height * 0.82f),
-                                radius = size.width * 0.90f
-                            )
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 40.dp),
-                        contentAlignment = Alignment.TopCenter
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(280.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.radialGradient(
-                                        colors = listOf(
-                                            c.accent.copy(alpha = 0.45f),
-                                            c.accent.copy(alpha = 0.20f),
-                                            Color.Transparent
-                                        )
-                                    )
-                                )
-                                .border(
-                                    width = 1.dp,
-                                    brush = Brush.radialGradient(
-                                        colors = listOf(
-                                            Color.White.copy(alpha = 0.35f),
-                                            Color.White.copy(alpha = 0.08f)
-                                        )
-                                    ),
-                                    shape = CircleShape
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_spotifree_logo),
-                                contentDescription = "Spotifree",
-                                modifier = Modifier.size(170.dp),
-                                alpha = 0.30f
-                            )
-                        }
-                    }
-                }
                 Column(Modifier.fillMaxSize()) {
                     // Top bar
                     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onClose) { Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(30.dp)) }
+                        IconButton(onClick = onClose, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(28.dp)) }
                         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(t("nowPlaying").uppercase(), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
                             Text(track.album.ifBlank { track.artist }, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        IconButton(onClick = { actions.showMenu(track, MenuContext()) }) { Icon(Icons.Default.MoreVert, null) }
+                        IconButton(onClick = { actions.showMenu(track, MenuContext()) }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.MoreVert, null) }
                     }
 
                     if (landscape) {
@@ -293,7 +245,7 @@ private fun TitleRow(title: String, artist: String, liked: Boolean, onLike: () -
         // Previous app: download button beside the heart
         if (track != null && !track.isLocal) {
             val d = downloads[track.id]
-            IconButton(onClick = { if (d?.state != DownloadState.DONE) actions.download(track) }) {
+            IconButton(onClick = { if (d?.state != DownloadState.DONE) actions.download(track) }, modifier = Modifier.glassyButton(c.isGlassy, size = 42.dp)) {
                 when (d?.state) {
                     DownloadState.DONE -> Icon(Icons.Default.DownloadDone, t("downloaded"), tint = c.accent, modifier = Modifier.size(28.dp))
                     DownloadState.RUNNING, DownloadState.QUEUED -> CircularProgressIndicator(
@@ -302,7 +254,7 @@ private fun TitleRow(title: String, artist: String, liked: Boolean, onLike: () -
                 }
             }
         }
-        IconButton(onClick = onLike) {
+        IconButton(onClick = onLike, modifier = Modifier.glassyButton(c.isGlassy, size = 42.dp)) {
             Icon(if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (liked) c.accent else Color.White, modifier = Modifier.size(28.dp))
         }
     }
@@ -331,7 +283,7 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
         Text(formatMs(state.durationMs), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
     }
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { graph.player.toggleShuffle() }) {
+        IconButton(onClick = { graph.player.toggleShuffle() }, modifier = Modifier.glassyButton(c.isGlassy, size = 42.dp)) {
             Icon(Icons.Default.Shuffle, null, tint = if (state.shuffle) c.accent else Color.White)
         }
         val skipModifier = if (c.isGlassy) {
@@ -391,7 +343,7 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
         IconButton(onClick = { graph.player.next() }, enabled = state.hasNext || state.queue.isNotEmpty(), modifier = skipModifier) {
             Icon(Icons.Default.SkipNext, null, modifier = Modifier.size(38.dp))
         }
-        IconButton(onClick = { graph.player.cycleRepeat() }) {
+        IconButton(onClick = { graph.player.cycleRepeat() }, modifier = Modifier.glassyButton(c.isGlassy, size = 42.dp)) {
             Icon(
                 if (state.repeatMode == Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat, null,
                 tint = if (state.repeatMode != Player.REPEAT_MODE_OFF) c.accent else Color.White,
@@ -400,7 +352,7 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
     }
     // Previous app: labelled pills (speed, sleep timer, lyrics) between devices and queue
     Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { onSheet(PlayerSheet.DEVICES) }) {
+        IconButton(onClick = { onSheet(PlayerSheet.DEVICES) }, modifier = Modifier.glassyButton(c.isGlassy, size = 40.dp)) {
             Icon(if (state.isCasting) Icons.Default.Cast else Icons.Default.Devices, t("connectDevice"),
                 tint = if (state.isCasting) c.accent else Color.White.copy(alpha = 0.85f))
         }
@@ -411,7 +363,7 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
             PlayerPill(null, Icons.Default.GraphicEq, active = false) { onSheet(PlayerSheet.EFFECTS) }
             PlayerPill(if (showLyrics) t("hideLyrics") else t("lyrics"), null, active = showLyrics, onClick = onToggleLyrics)
         }
-        IconButton(onClick = { onSheet(PlayerSheet.QUEUE) }) { Icon(Icons.AutoMirrored.Filled.QueueMusic, t("queue"), tint = Color.White.copy(alpha = 0.85f)) }
+        IconButton(onClick = { onSheet(PlayerSheet.QUEUE) }, modifier = Modifier.glassyButton(c.isGlassy, size = 40.dp)) { Icon(Icons.AutoMirrored.Filled.QueueMusic, t("queue"), tint = Color.White.copy(alpha = 0.85f)) }
     }
 }
 

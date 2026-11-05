@@ -58,6 +58,8 @@ import com.spotifree.app.data.db.DownloadState
 import com.spotifree.app.data.model.Track
 import com.spotifree.app.ui.LocalGraph
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glassyButton
+import com.spotifree.app.ui.theme.glassyCard
 
 fun formatDuration(sec: Int): String {
     if (sec <= 0) return ""
@@ -196,7 +198,7 @@ fun TrackRow(
         }
         trailing?.invoke()
         if (onMore != null) {
-            IconButton(onClick = onMore) { Icon(Icons.Default.MoreVert, null, tint = c.textSecondary) }
+            IconButton(onClick = onMore, modifier = Modifier.glassyButton(c.isGlassy, size = 32.dp)) { Icon(Icons.Default.MoreVert, null, tint = if (c.isGlassy) Color.White else c.textSecondary, modifier = Modifier.size(18.dp)) }
         }
     }
 }

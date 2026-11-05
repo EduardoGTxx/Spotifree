@@ -53,12 +53,14 @@ import com.spotifree.app.ui.common.Artwork
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.player.rememberCoverColor
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glassyButton
+import com.spotifree.app.ui.theme.glassyCard
 import androidx.compose.runtime.getValue
 
 @Composable
 fun DetailTopBar(title: String, onBack: () -> Unit, actions: @Composable () -> Unit = {}) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
+        IconButton(onClick = onBack, modifier = Modifier.glassyButton(LocalSpotifreeColors.current.isGlassy, size = 38.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) }
         Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         actions()
     }
@@ -168,7 +170,7 @@ fun PlayRow(onPlay: () -> Unit, onShuffle: () -> Unit, enabled: Boolean, extra: 
         horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         extra()
         Spacer(Modifier.weight(1f))
-        IconButton(onClick = onShuffle, enabled = enabled) { Icon(Icons.Default.Shuffle, t("shuffle"), tint = c.textSecondary, modifier = Modifier.size(28.dp)) }
+        IconButton(onClick = onShuffle, enabled = enabled, modifier = Modifier.glassyButton(c.isGlassy, size = 42.dp)) { Icon(Icons.Default.Shuffle, t("shuffle"), tint = if (c.isGlassy) Color.White else c.textSecondary, modifier = Modifier.size(24.dp)) }
         PlayFab(onPlay, size = 56.dp, enabled = enabled)
     }
 }
@@ -181,12 +183,14 @@ fun FilterField(value: String, onChange: (String) -> Unit) {
         placeholder = { Text(t("searchInPlaylist")) },
         leadingIcon = { Icon(Icons.Default.Search, null) },
         trailingIcon = { if (value.isNotEmpty()) IconButton(onClick = { onChange("") }) { Icon(Icons.Default.Clear, null) } },
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(if (c.isGlassy) 12.dp else 8.dp),
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = c.elevated, unfocusedContainerColor = c.elevated,
+            focusedContainerColor = if (c.isGlassy) Color.White.copy(alpha = 0.12f) else c.elevated,
+            unfocusedContainerColor = if (c.isGlassy) Color.White.copy(alpha = 0.08f) else c.elevated,
             focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
         ),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            .then(if (c.isGlassy) Modifier.border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(12.dp)) else Modifier),
     )
 }
 

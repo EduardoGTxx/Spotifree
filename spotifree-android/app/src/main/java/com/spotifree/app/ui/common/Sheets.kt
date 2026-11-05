@@ -98,7 +98,7 @@ fun TrackMenuSheet(track: Track, ctx: MenuContext, onDismiss: () -> Unit) {
         block()
         onDismiss()
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state, containerColor = c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = state, containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0xF0121626) else c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
         Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding()) {
             Row(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Artwork(track.artworkUrl, size = 52.dp)

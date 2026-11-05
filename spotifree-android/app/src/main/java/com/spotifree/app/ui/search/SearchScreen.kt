@@ -95,6 +95,8 @@ import com.spotifree.app.ui.common.ShelfCard
 import com.spotifree.app.ui.common.TrackRow
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glassyButton
+import com.spotifree.app.ui.theme.glassyCard
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -263,7 +265,7 @@ fun SearchScreen() {
                             Icon(Icons.Default.Search, null, tint = c.textSecondary)
                             Spacer(Modifier.width(16.dp))
                             Text(s, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            IconButton(onClick = { vm.onQuery(s) }) { Icon(Icons.Default.NorthWest, null, tint = c.textSecondary) }
+                            IconButton(onClick = { vm.onQuery(s) }, modifier = Modifier.glassyButton(c.isGlassy, size = 32.dp)) { Icon(Icons.Default.NorthWest, null, tint = c.textSecondary) }
                         }
                     }
                     if (ui.local.isNotEmpty()) {
@@ -287,7 +289,7 @@ fun SearchScreen() {
                                 Icon(Icons.Default.History, null, tint = c.textSecondary)
                                 Spacer(Modifier.width(16.dp))
                                 Text(h, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                IconButton(onClick = { vm.removeHistory(h) }) { Icon(Icons.Default.Close, null, tint = c.textSecondary) }
+                                IconButton(onClick = { vm.removeHistory(h) }, modifier = Modifier.glassyButton(c.isGlassy, size = 32.dp)) { Icon(Icons.Default.Close, null, tint = c.textSecondary) }
                             }
                         }
                     }
@@ -334,7 +336,7 @@ private fun Results(ui: SearchUi, currentId: String?, onRetry: () -> Unit) {
         if (ui.filter == null && top != null) item {
             SectionTitle(t("topResult"))
             Row(
-                Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(c.elevated)
+                Modifier.padding(horizontal = 16.dp).fillMaxWidth().glassyCard(c.isGlassy, RoundedCornerShape(12.dp)).background(if (c.isGlassy) Color.Transparent else c.elevated)
                     .clickable { actions.openArtist(top.url ?: top.name) }.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

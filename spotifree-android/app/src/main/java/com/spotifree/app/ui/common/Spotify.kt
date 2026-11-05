@@ -201,9 +201,21 @@ fun GradientIcon(colors: List<Color>, icon: ImageVector, size: Dp, modifier: Mod
 /** "Browse all" category card: bold title and a tilted icon tile in the corner. */
 @Composable
 fun CategoryCard(title: String, color: Color, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val c = LocalSpotifreeColors.current
+    val shape = RoundedCornerShape(if (c.isGlassy) 14.dp else 8.dp)
     Box(
-        modifier.height(100.dp).clip(RoundedCornerShape(8.dp))
-            .background(Brush.linearGradient(listOf(color, color.copy(red = color.red * 0.8f, green = color.green * 0.8f, blue = color.blue * 0.8f))))
+        modifier.height(100.dp)
+            .then(
+                if (c.isGlassy) {
+                    Modifier
+                        .shadow(8.dp, shape, spotColor = color.copy(alpha = 0.35f))
+                        .clip(shape)
+                        .background(Brush.linearGradient(listOf(color.copy(alpha = 0.88f), color.copy(red = color.red * 0.7f, green = color.green * 0.7f, blue = color.blue * 0.7f, alpha = 0.88f))))
+                        .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.12f))), shape)
+                } else {
+                    Modifier.clip(shape).background(Brush.linearGradient(listOf(color, color.copy(red = color.red * 0.8f, green = color.green * 0.8f, blue = color.blue * 0.8f))))
+                }
+            )
             .clickable(onClick = onClick),
     ) {
         Text(title, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis,
@@ -268,10 +280,31 @@ fun SeekBar(fraction: Float, onPreview: (Float?) -> Unit, onSeek: (Float) -> Uni
 @Composable
 fun ActionPill(text: String, icon: ImageVector? = null, primary: Boolean = true, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val c = LocalSpotifreeColors.current
-    val bg = if (primary) c.accent else Color.White.copy(alpha = 0.12f)
+    val bg = if (primary) {
+        if (c.isGlassy) Brush.verticalGradient(listOf(c.accent, c.accent.copy(alpha = 0.85f)))
+        else Brush.linearGradient(listOf(c.accent, c.accent))
+    } else {
+        if (c.isGlassy) Brush.linearGradient(listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0.10f)))
+        else Brush.linearGradient(listOf(Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.12f)))
+    }
     val fg = if (primary) onColor(c.accent) else Color.White
     Row(
-        modifier.height(44.dp).clip(CircleShape).background(bg).clickable(onClick = onClick).padding(horizontal = 20.dp),
+        modifier
+            .height(44.dp)
+            .shadow(if (c.isGlassy) 8.dp else 0.dp, CircleShape, spotColor = if (c.isGlassy && primary) c.accent.copy(alpha = 0.45f) else Color.Black)
+            .clip(CircleShape)
+            .background(bg)
+            .then(
+                if (c.isGlassy) {
+                    Modifier.border(
+                        1.dp,
+                        if (primary) Color.White.copy(alpha = 0.50f) else Color.White.copy(alpha = 0.28f),
+                        CircleShape
+                    )
+                } else Modifier
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {

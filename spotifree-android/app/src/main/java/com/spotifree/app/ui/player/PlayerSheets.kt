@@ -117,7 +117,7 @@ fun QueueSheet(onDismiss: () -> Unit) {
         state.queue.forEachIndexed { i, t -> if (i > state.queueIndex) upcoming += i to t }
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet, containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0xF0121626) else c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
         Column(Modifier.navigationBarsPadding()) {
             state.current?.let { cur ->
                 Text(t("nowPlaying"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 20.dp))
@@ -214,7 +214,7 @@ fun SleepTimerSheet(onDismiss: () -> Unit) {
             delay(1000)
         }
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0xF0121626) else c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
         Column(Modifier.navigationBarsPadding()) {
             Text(t("sleepTimer"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 20.dp))
             when (state.sleepMode) {
@@ -250,7 +250,7 @@ fun EffectsSheet(onDismiss: () -> Unit) {
     fun update(f: (com.spotifree.app.data.prefs.AppSettings) -> com.spotifree.app.data.prefs.AppSettings) = scope.launch { graph.settings.update(f) }
     val chipColors = FilterChipDefaults.filterChipColors(selectedContainerColor = c.accent, selectedLabelColor = Color.Black)
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0xF0121626) else c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
         Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 20.dp)) {
             Text(t("audioEffects"), style = MaterialTheme.typography.titleLarge)
 
@@ -336,7 +336,7 @@ fun DevicesSheet(onDismiss: () -> Unit) {
     var name by remember { mutableStateOf(graph.account.account.value?.name?.takeIf { it.isNotBlank() } ?: android.os.Build.MODEL) }
     var code by remember { mutableStateOf("") }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0xF0121626) else c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
         Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 20.dp)) {
             Text(t("connectDevice"), style = MaterialTheme.typography.titleLarge)
             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
