@@ -76,7 +76,7 @@ class TrackResolver(
         }
         if (videoId == null) throw TrackUnavailableException(trackId, "not_found")
 
-        val offline = settings.current.offlineMode || !Network.isOnline(context)
+        val offline = settings.current.offlineMode || !Network.isNetworkAllowed(context, settings.current.allowMobileData)
         if (offline) {
             val format = db.cache().format(videoId) ?: throw TrackUnavailableException(trackId, "offline")
             val key = cacheKey(videoId, format.itag)
@@ -132,7 +132,8 @@ class TrackResolver(
                 object : DataSource by delegate {
                     override fun open(dataSpec: DataSpec): Long {
                         val scheme = dataSpec.uri.scheme?.lowercase()
-                        if ((scheme == "http" || scheme == "https") && resolver.settings.current.offlineMode) {
+                        val blocked = resolver.settings.current.offlineMode || !Network.isNetworkAllowed(context, resolver.settings.current.allowMobileData)
+                        if ((scheme == "http" || scheme == "https") && blocked) {
                             throw OfflineModeException()
                         }
                         return delegate.open(dataSpec)

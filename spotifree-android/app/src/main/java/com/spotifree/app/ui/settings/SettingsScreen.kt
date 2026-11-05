@@ -241,6 +241,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                     SettingChoice(t("offlineQualityLabel"), t("qualityDesc"),
                         listOf("saving" to t("qualitySaving"), "normal" to t("qualityNormal"), "high" to t("qualityHigh")), s.audioQuality) { v -> set { it.copy(audioQuality = v) } }
                     SettingSwitch(t("wifiOnlyLabel"), null, s.downloadOnlyWifi) { v -> set { it.copy(downloadOnlyWifi = v) } }
+                    SettingSwitch(t("allowMobileDataLabel"), t("allowMobileDataDesc"), s.allowMobileData) { v -> set { it.copy(allowMobileData = v) } }
                     SettingSwitch(t("autoCacheLabel"), t("autoCacheDesc"), s.autoCacheOnPlay) { v -> set { it.copy(autoCacheOnPlay = v) } }
                     SettingSwitch(t("autoDownloadLikedLabel"), t("autoDownloadLikedDesc"), s.autoDownloadLiked) { v -> set { it.copy(autoDownloadLiked = v) } }
                     SettingSlider(t("cacheLimitLabel"), { mb -> if (mb >= 1024) "%.1f GB".format(mb / 1024f) else "${mb.toInt()} MB" }, s.cacheSizeMb.toFloat(), 256f..8192f, 30,

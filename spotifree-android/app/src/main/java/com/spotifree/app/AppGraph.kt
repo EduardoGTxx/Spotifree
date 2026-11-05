@@ -1,6 +1,10 @@
 package com.spotifree.app
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
+import com.spotifree.app.playback.Network
 import com.spotifree.app.data.db.AppDatabase
 import com.spotifree.app.data.download.DownloadRepository
 import com.spotifree.app.data.library.LibraryRepository
@@ -38,25 +42,29 @@ class AppGraph(val context: Context) {
     val db: AppDatabase = AppDatabase.create(context)
     val settings = SettingsRepository(context, scope)
 
-    val http: OkHttpClient = buildHttpClient(isOffline = { settings.current.offlineMode })
+    val isNetworkRestricted: () -> Boolean = {
+        settings.current.offlineMode || !Network.isNetworkAllowed(context, settings.current.allowMobileData)
+    }
+
+    val http: OkHttpClient = buildHttpClient(isOffline = isNetworkRestricted)
 
     val music = MusicRepository(http)
     val streams = StreamResolver(http, db.cache())
     val library = LibraryRepository(db, music, scope)
     val downloads = DownloadRepository(context, db, library, streams, settings, http, scope)
-    val lyrics = LyricsRepository(http, db.cache(), isOffline = { settings.current.offlineMode })
+    val lyrics = LyricsRepository(http, db.cache(), isOffline = isNetworkRestricted)
     val account = YouTubeAccountRepository(context, http, music)
     val messages = Messages()
 
-    val jam = com.spotifree.app.data.jam.JamClient(http, scope) { settings.current.offlineMode }
-    val recognizer = com.spotifree.app.data.recognition.Recognizer(context, http) { settings.current.offlineMode }
+    val jam = com.spotifree.app.data.jam.JamClient(http, scope, isNetworkRestricted)
+    val recognizer = com.spotifree.app.data.recognition.Recognizer(context, http, isNetworkRestricted)
     val updates = com.spotifree.app.data.update.UpdateChecker(context, http)
     val localMusic = com.spotifree.app.data.local.LocalMusicScanner(context, db)
     val artwork = com.spotifree.app.data.artwork.ArtworkResolver(
         http = http,
         tracks = db.tracks(),
         history = db.history(),
-        isOffline = { settings.current.offlineMode },
+        isOffline = isNetworkRestricted,
     ) { t -> library.resolveOnYouTube(t)?.artworkUrl }
     val backups = com.spotifree.app.data.importer.BackupManager(context, db, settings)
 
@@ -80,13 +88,15 @@ class AppGraph(val context: Context) {
         // Immediately sever all active sockets, in-flight requests, WebSockets, and download jobs when Offline Mode is enabled
         scope.launch {
             settings.settings
-                .map { it.offlineMode }
+                .map { it.offlineMode to it.allowMobileData }
                 .distinctUntilChanged()
-                .collect { offline ->
-                    if (offline) {
+                .collect { (offline, allowMobile) ->
+                    if (offline || !Network.isNetworkAllowed(context, allowMobile)) {
                         runCatching { jam.leave() }
                         runCatching { http.dispatcher.cancelAll() }
                         runCatching { http.connectionPool.evictAll() }
+                    }
+                    if (offline) {
                         runCatching { androidx.work.WorkManager.getInstance(context).cancelAllWorkByTag(DownloadRepository.TAG) }
                     }
                 }

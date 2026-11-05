@@ -20,4 +20,20 @@ object Network {
         val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
     }
+
+    fun isWifiOrUnmetered(context: Context): Boolean {
+        val cm = context.getSystemService(ConnectivityManager::class.java) ?: return false
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        if (!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return false
+        return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+               caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) ||
+               caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+    }
+
+    /** Returns true if internet access is permitted under the current connection and mobile data preference. */
+    fun isNetworkAllowed(context: Context, allowMobileData: Boolean): Boolean {
+        if (!isOnline(context)) return false
+        if (allowMobileData) return true
+        return isWifiOrUnmetered(context)
+    }
 }

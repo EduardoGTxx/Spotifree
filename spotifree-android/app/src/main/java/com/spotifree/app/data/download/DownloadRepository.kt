@@ -75,7 +75,7 @@ class DownloadRepository(
         if (existing?.state == DownloadState.RUNNING || existing?.state == DownloadState.QUEUED) return
         dao.upsert(DownloadEntity(trackId = track.id, state = DownloadState.QUEUED, isManual = manual))
         val constraints = Constraints.Builder()
-            .setRequiredNetworkType(if (settings.current.downloadOnlyWifi) NetworkType.UNMETERED else NetworkType.CONNECTED)
+            .setRequiredNetworkType(if (!settings.current.allowMobileData || settings.current.downloadOnlyWifi) NetworkType.UNMETERED else NetworkType.CONNECTED)
             .build()
         val request = OneTimeWorkRequestBuilder<DownloadWorker>()
             .setConstraints(constraints)

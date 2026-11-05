@@ -46,6 +46,7 @@ data class AppSettings(
     val autoDownloadLiked: Boolean = false,
     val cacheSizeMb: Int = 1024,
     val offlineMode: Boolean = false,
+    val allowMobileData: Boolean = false,
     // Lyrics
     val lyricsFontSize: String = "md", // sm | md | lg | xl
     val lyricsKaraoke: Boolean = true,
