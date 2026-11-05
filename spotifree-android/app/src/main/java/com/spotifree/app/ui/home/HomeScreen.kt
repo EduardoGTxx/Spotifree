@@ -10,6 +10,8 @@ import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Spa
+import androidx.compose.material.icons.filled.SystemUpdate
+import com.spotifree.app.data.update.AppUpdate
 import androidx.compose.material.icons.filled.Speaker
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material.icons.outlined.Settings
@@ -176,7 +178,10 @@ private val SHORTCUTS = listOf(
 )
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    availableUpdate: AppUpdate? = null,
+    onUpdateClick: (AppUpdate) -> Unit = {},
+) {
     val graph = LocalGraph.current
     val actions = LocalActions.current
     val strings = LocalStrings.current
@@ -227,6 +232,26 @@ fun HomeScreen() {
                             Icon(Icons.Default.CloudOff, null, tint = c.accent)
                             Spacer(Modifier.width(12.dp))
                             Text(t("offlineModeOn"), style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    availableUpdate?.let { u ->
+                        Row(
+                            Modifier
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(c.elevated)
+                                .clickable { onUpdateClick(u) }
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Default.SystemUpdate, null, tint = c.accent, modifier = Modifier.size(24.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(t("updateAvailable") + " · v" + u.version, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Text(t("updateNow"), style = MaterialTheme.typography.bodySmall, color = c.accent)
+                            }
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = c.textSecondary)
                         }
                     }
                     val chips = buildList {

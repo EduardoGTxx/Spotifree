@@ -102,6 +102,9 @@ import com.spotifree.app.ui.settings.UpdateDialog
 import com.spotifree.app.ui.stats.RewindScreen
 import com.spotifree.app.ui.stats.StatsScreen
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.playback.Network
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 private data class Tab(val route: Any, val label: String, val icon: ImageVector, val selectedIcon: ImageVector)
@@ -123,6 +126,8 @@ fun MainScreen(activity: MainActivity) {
     var menu by remember { mutableStateOf<Pair<Track, MenuContext>?>(null) }
     var addTo by remember { mutableStateOf<List<Track>?>(null) }
     var update by remember { mutableStateOf<AppUpdate?>(null) }
+    var availableUpdate by remember { mutableStateOf<AppUpdate?>(null) }
+    var dismissedInSession by remember { mutableStateOf<String?>(null) }
 
     val actions = remember(nav) {
         AppActions(
@@ -193,12 +198,48 @@ fun MainScreen(activity: MainActivity) {
         }
     }
 
-    // Update check once per launch (silent when offline or up to date)
-    LaunchedEffect(Unit) {
-        if (!graph.settings.current.offlineMode) {
+    // Automatic update check on launch, foreground resume, and network recovery
+    fun triggerUpdateCheck() {
+        if (graph.settings.current.offlineMode) return
+        if (!Network.isNetworkAllowed(context, graph.settings.current.allowMobileData)) return
+        scope.launch {
             val r = runCatchingCancellable { graph.updates.check() }.getOrNull()
-            if (r is UpdateCheck.Available && r.update.version != settings.dismissedUpdateVersion) update = r.update
+            if (r is UpdateCheck.Available) {
+                availableUpdate = r.update
+                if (dismissedInSession != r.update.version) {
+                    update = r.update
+                }
+            } else if (r is UpdateCheck.UpToDate) {
+                availableUpdate = null
+            }
         }
+    }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(600)
+        triggerUpdateCheck()
+    }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                triggerUpdateCheck()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    LaunchedEffect(Unit) {
+        graph.settings.settings
+            .map { it.offlineMode to it.allowMobileData }
+            .distinctUntilChanged()
+            .collect { (offline, allowMobile) ->
+                if (!offline && Network.isNetworkAllowed(context, allowMobile)) {
+                    triggerUpdateCheck()
+                }
+            }
     }
 
     // Automatic backup on exit / at startup when due
@@ -244,7 +285,7 @@ fun MainScreen(activity: MainActivity) {
                 },
             ) { padding ->
                 NavHost(nav, startDestination = HomeRoute, modifier = Modifier.padding(padding)) {
-                    composable<HomeRoute> { HomeScreen() }
+                    composable<HomeRoute> { HomeScreen(availableUpdate = availableUpdate, onUpdateClick = { update = it }) }
                     composable<SearchRoute> { Inset { SearchScreen() } }
                     composable<LibraryRoute> { Inset { LibraryScreen() } }
                     composable<SettingsRoute> { Inset { SettingsScreen(onBack = { nav.popBackStack() }) } }
@@ -277,7 +318,7 @@ fun MainScreen(activity: MainActivity) {
         update?.let { u ->
             UpdateDialog(u, onDismiss = {
                 update = null
-                scope.launch { graph.settings.update { it.copy(dismissedUpdateVersion = u.version) } }
+                dismissedInSession = u.version
             })
         }
     }

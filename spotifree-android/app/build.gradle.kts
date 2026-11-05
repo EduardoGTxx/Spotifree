@@ -9,6 +9,13 @@ plugins {
     id("org.jetbrains.kotlin.kapt")
 }
 
+val versionProps = Properties().apply {
+    val f = rootProject.file("version.properties")
+    if (f.exists()) f.inputStream().use { stream -> load(stream) }
+}
+val defaultVersionName = versionProps.getProperty("versionName") ?: "2.1.10"
+val defaultVersionCode = versionProps.getProperty("versionCode")?.toIntOrNull() ?: 20110
+
 val keystoreProps = Properties().apply {
     val f = rootProject.file("keystore.properties")
     if (f.exists()) f.inputStream().use { stream -> load(stream) }
@@ -30,8 +37,8 @@ android {
         minSdk = 29
         targetSdk = 36
         // CI passes -PappVersionCode / -PappVersionName from the release tag
-        versionCode = (project.findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 30
-        versionName = (project.findProperty("appVersionName") as String?) ?: "2.0.0"
+        versionCode = (project.findProperty("appVersionCode") as String?)?.toIntOrNull() ?: defaultVersionCode
+        versionName = (project.findProperty("appVersionName") as String?) ?: defaultVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

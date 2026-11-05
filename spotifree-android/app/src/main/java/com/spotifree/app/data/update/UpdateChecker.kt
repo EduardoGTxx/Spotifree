@@ -38,12 +38,32 @@ class UpdateChecker(private val context: Context, private val http: OkHttpClient
     private val json = Json { ignoreUnknownKeys = true }
 
     suspend fun check(): UpdateCheck = withContext(Dispatchers.IO) {
-        val latest = runCatchingCancellable { fromReleases() }.getOrNull() ?: runCatchingCancellable { fromManifest() }.getOrNull()
+        val latest = runCatchingCancellable { fromManifest() }.getOrNull()
+            ?: runCatchingCancellable { fromReleases() }.getOrNull()
             ?: return@withContext UpdateCheck.Failed(lastReason)
         if (compare(BuildConfig.VERSION_NAME, latest.version) < 0) UpdateCheck.Available(latest) else UpdateCheck.UpToDate
     }
 
     private var lastReason = "network"
+
+    private fun fromManifest(): AppUpdate? {
+        // Published next to the APK by the release workflow (static asset, avoids GitHub API rate limits)
+        val req = Request.Builder().url("https://github.com/$REPO/releases/latest/download/update-manifest.json")
+            .header("Cache-Control", "no-cache")
+            .build()
+        http.newCall(req).execute().use { r ->
+            if (!r.isSuccessful) { lastReason = "manifest_http_${r.code}"; return null }
+            val o = json.parseToJsonElement(r.body?.string() ?: return null) as JsonObject
+            val version = o["version"]?.jsonPrimitive?.contentOrNull?.removePrefix("v") ?: return null
+            return AppUpdate(
+                version = version,
+                title = o["title"]?.jsonPrimitive?.contentOrNull ?: "Spotifree v$version",
+                notes = (o["notes"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }.orEmpty(),
+                apkUrl = o["apkUrl"]?.jsonPrimitive?.contentOrNull ?: "https://github.com/$REPO/releases/download/v$version/Spotifree.apk",
+                sha256 = o["sha256"]?.jsonPrimitive?.contentOrNull,
+            )
+        }
+    }
 
     private fun fromReleases(): AppUpdate? {
         val req = Request.Builder().url("https://api.github.com/repos/$REPO/releases/latest")
@@ -51,7 +71,7 @@ class UpdateChecker(private val context: Context, private val http: OkHttpClient
         http.newCall(req).execute().use { r ->
             if (r.code == 404) { lastReason = "repo_not_found"; return null }
             if (r.code == 403) { lastReason = "rate_limit"; return null }
-            if (!r.isSuccessful) return null
+            if (!r.isSuccessful) { lastReason = "releases_http_${r.code}"; return null }
             val o = json.parseToJsonElement(r.body?.string() ?: return null) as JsonObject
             val tag = o["tag_name"]?.jsonPrimitive?.contentOrNull ?: return null
             val version = tag.removePrefix("v")
@@ -66,23 +86,6 @@ class UpdateChecker(private val context: Context, private val http: OkHttpClient
                 notes = body.lines().map { it.trim() }.filter { it.startsWith("-") || it.startsWith("*") }.map { it.trimStart('-', '*', ' ') },
                 apkUrl = apk,
                 sha256 = Regex("""sha-?256[:\s=]+([a-fA-F0-9]{64})""", RegexOption.IGNORE_CASE).find(body)?.groupValues?.get(1),
-            )
-        }
-    }
-
-    private fun fromManifest(): AppUpdate? {
-        // Published next to the APK by the release workflow
-        val req = Request.Builder().url("https://github.com/$REPO/releases/latest/download/update-manifest.json").build()
-        http.newCall(req).execute().use { r ->
-            if (!r.isSuccessful) return null
-            val o = json.parseToJsonElement(r.body?.string() ?: return null) as JsonObject
-            val version = o["version"]?.jsonPrimitive?.contentOrNull?.removePrefix("v") ?: return null
-            return AppUpdate(
-                version = version,
-                title = o["title"]?.jsonPrimitive?.contentOrNull ?: "Spotifree v$version",
-                notes = (o["notes"] as? JsonArray)?.mapNotNull { it.jsonPrimitive.contentOrNull }.orEmpty(),
-                apkUrl = o["apkUrl"]?.jsonPrimitive?.contentOrNull ?: "https://github.com/$REPO/releases/download/v$version/Spotifree.apk",
-                sha256 = o["sha256"]?.jsonPrimitive?.contentOrNull,
             )
         }
     }
