@@ -28,7 +28,6 @@ Desde la **versión 2.0** es una app **nativa en Kotlin** (Jetpack Compose + Med
 ## ✨ Funciones
 
 | | |
-|---|---|
 | ▶️ **Reproducción nativa** | Media3/ExoPlayer en segundo plano, notificación, pantalla de bloqueo, Bluetooth, Android Auto, Chromecast y widget. La cola se conserva al cerrar la app. |
 | 🔎 **Explorar** | Canciones, álbumes, artistas y playlists de YouTube Music, con radio infinita al terminar la cola. |
 | ⬇️ **Descargas** | Siguen aunque cierres la app, caché automática mientras escuchas y modo sin conexión. |
