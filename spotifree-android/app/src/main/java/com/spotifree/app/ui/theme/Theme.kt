@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -120,59 +121,55 @@ fun glassyGradient(accent: Color): List<Color> {
 fun rememberGlassyWaveBrush(accent: Color): Brush {
     val transition = rememberInfiniteTransition(label = "musicWave")
     val waveOffset by transition.animateFloat(
-        initialValue = 0.20f,
-        targetValue = 0.70f,
+        initialValue = 0.25f,
+        targetValue = 0.75f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3800, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 4200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "waveOffset"
     )
-    val waveHarmonic by transition.animateFloat(
-        initialValue = 0.50f,
-        targetValue = 0.90f,
+    val harmonicSpread by transition.animateFloat(
+        initialValue = 0.12f,
+        targetValue = 0.22f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = 5200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "waveHarmonic"
+        label = "harmonicSpread"
     )
-    val waveBrightness by transition.animateFloat(
-        initialValue = 0.32f,
-        targetValue = 0.60f,
+    val crestPulse by transition.animateFloat(
+        initialValue = 0.75f,
+        targetValue = 0.92f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "crestPulse"
+    )
+    val harmonicPulse by transition.animateFloat(
+        initialValue = 0.40f,
+        targetValue = 0.65f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = 2600, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "waveBrightness"
+        label = "harmonicPulse"
     )
 
-    val baseBg = Color(0xFF080A12)
-    val topColor = Color(
-        red = accent.red * waveBrightness + baseBg.red * (1f - waveBrightness),
-        green = accent.green * waveBrightness + baseBg.green * (1f - waveBrightness),
-        blue = accent.blue * waveBrightness + baseBg.blue * (1f - waveBrightness),
-        alpha = 1f
-    )
-    val midColor = Color(
-        red = accent.red * (waveBrightness * 0.55f) + baseBg.red * (1f - waveBrightness * 0.55f),
-        green = accent.green * (waveBrightness * 0.55f) + baseBg.green * (1f - waveBrightness * 0.55f),
-        blue = accent.blue * (waveBrightness * 0.55f) + baseBg.blue * (1f - waveBrightness * 0.55f),
-        alpha = 1f
-    )
-    val lowColor = Color(
-        red = accent.red * 0.12f + baseBg.red * 0.88f,
-        green = accent.green * 0.12f + baseBg.green * 0.88f,
-        blue = accent.blue * 0.12f + baseBg.blue * 0.88f,
-        alpha = 1f
-    )
+    val darkBase = Color(0xFF0A0D18)
+    val topColor = accent.copy(alpha = crestPulse).compositeOver(darkBase)
+    val midColor = accent.copy(alpha = harmonicPulse).compositeOver(darkBase)
+    val deepBase = accent.copy(alpha = 0.15f).compositeOver(darkBase)
+
+    val harmonicOffset = (waveOffset + harmonicSpread).coerceIn(waveOffset + 0.08f, 0.96f)
 
     return Brush.verticalGradient(
         colorStops = arrayOf(
             0.0f to topColor,
             waveOffset to midColor,
-            waveHarmonic to lowColor,
-            1.0f to baseBg
+            harmonicOffset to deepBase,
+            1.0f to darkBase
         )
     )
 }
