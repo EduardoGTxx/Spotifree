@@ -49,13 +49,21 @@ fun SettingsCard(title: String, icon: ImageVector, content: @Composable () -> Un
             .then(
                 if (c.isGlassy) {
                     Modifier
-                        .shadow(8.dp, shape, spotColor = c.accent.copy(alpha = 0.25f))
+                        .shadow(10.dp, shape, spotColor = c.accent.copy(alpha = 0.30f))
                         .clip(shape)
-                        .background(Color.White.copy(alpha = 0.12f))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.18f),
+                                    c.accent.copy(alpha = 0.10f),
+                                    Color.White.copy(alpha = 0.10f)
+                                )
+                            )
+                        )
                         .border(
                             1.dp,
                             Brush.verticalGradient(
-                                listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.10f))
+                                listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.14f))
                             ),
                             shape
                         )

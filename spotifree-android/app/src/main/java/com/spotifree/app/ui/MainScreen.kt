@@ -13,6 +13,10 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.res.painterResource
+import com.spotifree.app.R
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -270,6 +274,25 @@ fun MainScreen(activity: MainActivity) {
     val destination = backStack?.destination
 
     CompositionLocalProvider(LocalActions provides actions) {
+        val baseBg = Color(0xFF090B14)
+        val topOpaque = Color(
+            red = c.accent.red * 0.45f + baseBg.red * 0.55f,
+            green = c.accent.green * 0.45f + baseBg.green * 0.55f,
+            blue = c.accent.blue * 0.45f + baseBg.blue * 0.55f,
+            alpha = 1f
+        )
+        val midOpaque = Color(
+            red = c.accent.red * 0.24f + baseBg.red * 0.76f,
+            green = c.accent.green * 0.24f + baseBg.green * 0.76f,
+            blue = c.accent.blue * 0.24f + baseBg.blue * 0.76f,
+            alpha = 1f
+        )
+        val bottomOpaque = Color(
+            red = c.accent.red * 0.14f + baseBg.red * 0.86f,
+            green = c.accent.green * 0.14f + baseBg.green * 0.86f,
+            blue = c.accent.blue * 0.14f + baseBg.blue * 0.86f,
+            alpha = 1f
+        )
         Box(
             Modifier
                 .fillMaxSize()
@@ -277,12 +300,7 @@ fun MainScreen(activity: MainActivity) {
                     if (c.isGlassy) {
                         Modifier.background(
                             Brush.verticalGradient(
-                                colors = listOf(
-                                    c.accent.copy(alpha = 0.50f),
-                                    c.accent.copy(alpha = 0.20f),
-                                    Color(0xFF0C0D14),
-                                    Color(0xFF07070A)
-                                )
+                                colors = listOf(topOpaque, midOpaque, bottomOpaque, baseBg)
                             )
                         )
                     } else {
@@ -294,18 +312,50 @@ fun MainScreen(activity: MainActivity) {
                 Canvas(Modifier.fillMaxSize()) {
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(c.accent.copy(alpha = 0.40f), Color.Transparent),
-                            center = Offset(size.width * 0.88f, size.height * 0.12f),
+                            colors = listOf(c.accent.copy(alpha = 0.25f), Color.Transparent),
+                            center = Offset(size.width * 0.15f, size.height * 0.82f),
                             radius = size.width * 0.90f
                         )
                     )
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(c.accent.copy(alpha = 0.28f), Color.Transparent),
-                            center = Offset(size.width * 0.12f, size.height * 0.72f),
-                            radius = size.width * 0.95f
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 110.dp),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(280.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.radialGradient(
+                                    colors = listOf(
+                                        c.accent.copy(alpha = 0.45f),
+                                        c.accent.copy(alpha = 0.20f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                            .border(
+                                width = 1.dp,
+                                brush = Brush.radialGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.35f),
+                                        Color.White.copy(alpha = 0.08f)
+                                    )
+                                ),
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_spotifree_logo),
+                            contentDescription = "Spotifree",
+                            modifier = Modifier.size(170.dp),
+                            alpha = 0.35f
                         )
-                    )
+                    }
                 }
             }
             Scaffold(
@@ -315,9 +365,7 @@ fun MainScreen(activity: MainActivity) {
                 snackbarHost = { SnackbarHost(snackbar) },
                 bottomBar = {
                     // Rewind is full screen, like stories
-                    if (destination?.hasRoute(RewindRoute::class) != true) Column(
-                        modifier = if (c.isGlassy) Modifier.padding(horizontal = 12.dp, vertical = 6.dp) else Modifier
-                    ) {
+                    if (destination?.hasRoute(RewindRoute::class) != true) Column {
                         if (playerState.current != null) MiniPlayer(onOpen = { showPlayer = true })
                         BottomBar(tabs, selected = { tab -> destination?.hierarchy?.any { d -> d.hasRoute(tab.route::class) } == true }) { tab ->
                             nav.navigate(tab.route) {
@@ -380,21 +428,18 @@ private fun Inset(content: @Composable () -> Unit) {
 private fun BottomBar(tabs: List<Tab>, selected: (Tab) -> Boolean, onSelect: (Tab) -> Unit) {
     val c = LocalSpotifreeColors.current
     if (c.isGlassy) {
-        val glassShape = RoundedCornerShape(26.dp)
+        val topBorder = Color.White.copy(alpha = 0.18f)
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(bottom = 6.dp)
-                .shadow(elevation = 16.dp, shape = glassShape, spotColor = c.accent.copy(alpha = 0.35f))
-                .clip(glassShape)
-                .background(Color.White.copy(alpha = 0.14f))
-                .border(
-                    width = 1.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.12f))
-                    ),
-                    shape = glassShape
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color.White.copy(alpha = 0.14f), Color.White.copy(alpha = 0.06f))
+                    )
                 )
+                .drawBehind {
+                    drawLine(topBorder, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx())
+                }
                 .navigationBarsPadding()
                 .height(60.dp),
         ) {
@@ -414,6 +459,7 @@ private fun BottomBar(tabs: List<Tab>, selected: (Tab) -> Boolean, onSelect: (Ta
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(Color.White.copy(alpha = 0.18f))
+                                .border(1.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(12.dp))
                                 .padding(horizontal = 14.dp, vertical = 4.dp),
                             contentAlignment = Alignment.Center
                         ) {

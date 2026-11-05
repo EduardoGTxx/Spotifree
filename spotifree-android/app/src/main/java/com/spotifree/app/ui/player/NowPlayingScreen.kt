@@ -14,6 +14,9 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.spotifree.app.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.geometry.Offset
@@ -120,23 +123,33 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
+            val baseBg = Color(0xFF090B14)
+            val topOpaque = Color(
+                red = c.accent.red * 0.45f + baseBg.red * 0.55f,
+                green = c.accent.green * 0.45f + baseBg.green * 0.55f,
+                blue = c.accent.blue * 0.45f + baseBg.blue * 0.55f,
+                alpha = 1f
+            )
+            val midOpaque = Color(
+                red = c.accent.red * 0.24f + baseBg.red * 0.76f,
+                green = c.accent.green * 0.24f + baseBg.green * 0.76f,
+                blue = c.accent.blue * 0.24f + baseBg.blue * 0.76f,
+                alpha = 1f
+            )
+            val bottomOpaque = Color(
+                red = c.accent.red * 0.14f + baseBg.red * 0.86f,
+                green = c.accent.green * 0.14f + baseBg.green * 0.86f,
+                blue = c.accent.blue * 0.14f + baseBg.blue * 0.86f,
+                alpha = 1f
+            )
             Box(
                 Modifier
                     .fillMaxSize()
-                    .then(
+                    .background(
                         if (c.isGlassy) {
-                            Modifier.background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        c.accent.copy(alpha = 0.55f),
-                                        c.accent.copy(alpha = 0.22f),
-                                        Color(0xFF0D0E16),
-                                        Color(0xFF07070B)
-                                    )
-                                )
-                            )
+                            Brush.verticalGradient(listOf(topOpaque, midOpaque, bottomOpaque, baseBg))
                         } else {
-                            Modifier.background(Brush.verticalGradient(listOf(animated, if (c.amoled) Color.Black else c.background)))
+                            Brush.verticalGradient(listOf(animated, if (c.amoled) Color.Black else c.background))
                         }
                     )
                     .pointerInput(Unit) {
@@ -155,11 +168,50 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                     Canvas(Modifier.fillMaxSize()) {
                         drawCircle(
                             brush = Brush.radialGradient(
-                                colors = listOf(c.accent.copy(alpha = 0.45f), Color.Transparent),
-                                center = Offset(size.width * 0.5f, size.height * 0.32f),
-                                radius = size.width * 0.85f
+                                colors = listOf(c.accent.copy(alpha = 0.25f), Color.Transparent),
+                                center = Offset(size.width * 0.15f, size.height * 0.82f),
+                                radius = size.width * 0.90f
                             )
                         )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 40.dp),
+                        contentAlignment = Alignment.TopCenter
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(280.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.radialGradient(
+                                        colors = listOf(
+                                            c.accent.copy(alpha = 0.45f),
+                                            c.accent.copy(alpha = 0.20f),
+                                            Color.Transparent
+                                        )
+                                    )
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    brush = Brush.radialGradient(
+                                        colors = listOf(
+                                            Color.White.copy(alpha = 0.35f),
+                                            Color.White.copy(alpha = 0.08f)
+                                        )
+                                    ),
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_spotifree_logo),
+                                contentDescription = "Spotifree",
+                                modifier = Modifier.size(170.dp),
+                                alpha = 0.30f
+                            )
+                        }
                     }
                 }
                 Column(Modifier.fillMaxSize()) {
