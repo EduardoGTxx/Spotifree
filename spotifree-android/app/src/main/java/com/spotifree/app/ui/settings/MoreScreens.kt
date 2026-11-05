@@ -148,7 +148,7 @@ fun DownloadsManagerScreen(onBack: () -> Unit) {
     val all by graph.downloads.all.collectAsStateWithLifecycle()
     val rows = remember(all) { all.values.sortedWith(compareBy({ it.state == DownloadState.DONE }, { -it.savedAt })) }
     val titles = remember { mutableStateOf<Map<String, com.spotifree.app.data.model.Track>>(emptyMap()) }
-    androidx.compose.runtime.LaunchedEffect(rows.size) {
+    androidx.compose.runtime.LaunchedEffect(rows.map { it.trackId }) {
         titles.value = graph.library.tracksByIds(rows.map { it.trackId }).associateBy { it.id }
     }
     Column(Modifier.fillMaxSize()) {

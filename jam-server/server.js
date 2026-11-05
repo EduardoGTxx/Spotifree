@@ -102,6 +102,7 @@ wss.on('connection', (ws) => {
         break;
     }
   });
+  ws.on('error', () => leave(ws));
   ws.on('close', () => leave(ws));
 });
 
