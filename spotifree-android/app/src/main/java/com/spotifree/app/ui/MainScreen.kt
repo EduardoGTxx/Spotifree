@@ -112,6 +112,10 @@ import com.spotifree.app.ui.settings.UpdateDialog
 import com.spotifree.app.ui.stats.RewindScreen
 import com.spotifree.app.ui.stats.StatsScreen
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glass.liquidGlass
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import com.spotifree.app.playback.Network
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -356,51 +360,65 @@ private fun Inset(content: @Composable () -> Unit) {
 private fun BottomBar(tabs: List<Tab>, selected: (Tab) -> Boolean, onSelect: (Tab) -> Unit) {
     val c = LocalSpotifreeColors.current
     if (c.isGlassy) {
-        val topBorder = Color.White.copy(alpha = 0.18f)
-        Row(
-            Modifier
+        Box(
+            modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color.White.copy(alpha = 0.14f), Color.White.copy(alpha = 0.06f))
-                    )
-                )
-                .drawBehind {
-                    drawLine(topBorder, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx())
-                }
                 .navigationBarsPadding()
-                .height(60.dp),
+                .padding(horizontal = 20.dp, vertical = 10.dp),
+            contentAlignment = Alignment.Center
         ) {
-            tabs.forEach { tab ->
-                val active = selected(tab)
-                val tint = if (active) Color.White else Color.White.copy(alpha = 0.65f)
-                Column(
-                    Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onSelect(tab) },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    if (active) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color.White.copy(alpha = 0.18f))
-                                .border(1.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(12.dp))
-                                .padding(horizontal = 14.dp, vertical = 4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(tab.selectedIcon, tab.label, tint = tint, modifier = Modifier.size(22.dp))
-                                Spacer(Modifier.height(2.dp))
-                                Text(tab.label, color = tint, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-                            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .liquidGlass(
+                        isGlassy = true,
+                        shape = CircleShape,
+                        accent = c.accent,
+                        surfaceAlpha = 0.18f,
+                        borderAlpha = 0.55f,
+                        blurRadius = 24.dp,
+                        shadowElevation = 14.dp
+                    )
+                    .padding(horizontal = 6.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                tabs.forEach { tab ->
+                    val active = selected(tab)
+                    val tint = if (active) Color.White else Color.White.copy(alpha = 0.65f)
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .clip(CircleShape)
+                            .then(
+                                if (active) {
+                                    Modifier
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    c.accent.copy(alpha = 0.40f),
+                                                    c.accent.copy(alpha = 0.20f)
+                                                )
+                                            )
+                                        )
+                                        .border(
+                                            1.dp,
+                                            Brush.verticalGradient(
+                                                listOf(Color.White.copy(alpha = 0.60f), Color.White.copy(alpha = 0.15f))
+                                            ),
+                                            CircleShape
+                                        )
+                                } else Modifier
+                            )
+                            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onSelect(tab) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                            Icon(if (active) tab.selectedIcon else tab.icon, tab.label, tint = tint, modifier = Modifier.size(22.dp))
+                            Spacer(Modifier.height(2.dp))
+                            Text(tab.label, color = tint, fontSize = 10.sp, fontWeight = if (active) FontWeight.ExtraBold else FontWeight.Medium, maxLines = 1)
                         }
-                    } else {
-                        Icon(tab.icon, tab.label, tint = tint, modifier = Modifier.size(22.dp))
-                        Spacer(Modifier.height(2.dp))
-                        Text(tab.label, color = tint, fontSize = 11.sp, fontWeight = FontWeight.Medium, maxLines = 1)
                     }
                 }
             }
