@@ -92,6 +92,7 @@ import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
 import com.spotifree.app.ui.theme.glass.liquidGlass
+import com.spotifree.app.ui.theme.glass.liquidGlassButton
 import com.spotifree.app.ui.theme.glassyButton
 import com.spotifree.app.ui.theme.onColor
 
@@ -125,7 +126,7 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
-            val npGlassyWave = if (c.isGlassy) com.spotifree.app.ui.theme.rememberGlassyWaveBrush(c.accent) else null
+            val npGlassyWave = if (c.isGlassy) com.spotifree.app.ui.theme.rememberGlassyWaveBrush(animated) else null
             Box(
                 Modifier
                     .fillMaxSize()
@@ -151,12 +152,12 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                 Column(Modifier.fillMaxSize()) {
                     // Top bar
                     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onClose, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(28.dp)) }
+                        IconButton(onClick = onClose, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.KeyboardArrowDown, null, tint = Color.White, modifier = Modifier.size(28.dp)) }
                         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(t("nowPlaying").uppercase(), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
                             Text(track.album.ifBlank { track.artist }, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        IconButton(onClick = { actions.showMenu(track, MenuContext()) }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.MoreVert, null) }
+                        IconButton(onClick = { actions.showMenu(track, MenuContext()) }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.MoreVert, null, tint = Color.White) }
                     }
 
                     if (landscape) {
@@ -251,7 +252,7 @@ private fun TitleRow(title: String, artist: String, liked: Boolean, onLike: () -
                     DownloadState.DONE -> Icon(Icons.Default.DownloadDone, t("downloaded"), tint = c.accent, modifier = Modifier.size(28.dp))
                     DownloadState.RUNNING, DownloadState.QUEUED -> CircularProgressIndicator(
                         progress = { d.progress.coerceIn(0.02f, 1f) }, modifier = Modifier.size(24.dp), strokeWidth = 2.5.dp, color = c.accent)
-                    else -> Icon(Icons.Outlined.DownloadForOffline, t("download"), tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(28.dp))
+                    else -> Icon(Icons.Outlined.DownloadForOffline, t("download"), tint = Color.White, modifier = Modifier.size(28.dp))
                 }
             }
         }
@@ -288,16 +289,12 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
             Icon(Icons.Default.Shuffle, null, tint = if (state.shuffle) c.accent else Color.White)
         }
         val skipModifier = if (c.isGlassy) {
-            Modifier
-                .size(54.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.12f))
-                .border(1.dp, Color.White.copy(alpha = 0.25f), CircleShape)
+            Modifier.liquidGlassButton(isGlassy = true, size = 54.dp, accent = c.accent)
         } else {
             Modifier.size(56.dp)
         }
         IconButton(onClick = { graph.player.previous() }, modifier = skipModifier) {
-            Icon(Icons.Default.SkipPrevious, null, modifier = Modifier.size(38.dp))
+            Icon(Icons.Default.SkipPrevious, null, tint = Color.White, modifier = Modifier.size(38.dp))
         }
         if (c.isGlassy) {
             Box(
@@ -307,17 +304,15 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
                         isGlassy = true,
                         shape = CircleShape,
                         accent = c.accent,
-                        surfaceAlpha = 0.30f,
-                        borderAlpha = 0.75f,
-                        blurRadius = 24.dp,
-                        shadowElevation = 18.dp,
-                        interactive = true
+                        surfaceAlpha = 0.26f,
+                        borderAlpha = 0.70f,
+                        shadowElevation = 14.dp
                     ),
                 contentAlignment = Alignment.Center,
             ) {
                 IconButton(onClick = { graph.player.togglePlay() }, modifier = Modifier.fillMaxSize()) {
                     if (state.isBuffering) CircularProgressIndicator(Modifier.size(34.dp), color = Color.White, strokeWidth = 3.dp)
-                    else Icon(if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.size(44.dp))
+                    else Icon(if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.size(42.dp))
                 }
             }
         } else {
@@ -331,8 +326,9 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
                 }
             }
         }
-        IconButton(onClick = { graph.player.next() }, enabled = state.hasNext || state.queue.isNotEmpty(), modifier = skipModifier) {
-            Icon(Icons.Default.SkipNext, null, modifier = Modifier.size(38.dp))
+        val nextEnabled = state.hasNext || state.queue.isNotEmpty()
+        IconButton(onClick = { graph.player.next() }, enabled = nextEnabled, modifier = skipModifier) {
+            Icon(Icons.Default.SkipNext, null, tint = if (nextEnabled) Color.White else Color.White.copy(alpha = 0.38f), modifier = Modifier.size(38.dp))
         }
         IconButton(onClick = { graph.player.cycleRepeat() }, modifier = Modifier.glassyButton(c.isGlassy, size = 42.dp)) {
             Icon(
@@ -345,7 +341,7 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
     Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = { onSheet(PlayerSheet.DEVICES) }, modifier = Modifier.glassyButton(c.isGlassy, size = 40.dp)) {
             Icon(if (state.isCasting) Icons.Default.Cast else Icons.Default.Devices, t("connectDevice"),
-                tint = if (state.isCasting) c.accent else Color.White.copy(alpha = 0.85f))
+                tint = if (state.isCasting) c.accent else Color.White)
         }
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
             val speed = if (state.speed == 1f) "1x" else "%.2fx".format(state.speed).replace(".00x", "x").replace("0x", "x")
@@ -354,7 +350,7 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
             PlayerPill(null, Icons.Default.GraphicEq, active = false) { onSheet(PlayerSheet.EFFECTS) }
             PlayerPill(if (showLyrics) t("hideLyrics") else t("lyrics"), null, active = showLyrics, onClick = onToggleLyrics)
         }
-        IconButton(onClick = { onSheet(PlayerSheet.QUEUE) }, modifier = Modifier.glassyButton(c.isGlassy, size = 40.dp)) { Icon(Icons.AutoMirrored.Filled.QueueMusic, t("queue"), tint = Color.White.copy(alpha = 0.85f)) }
+        IconButton(onClick = { onSheet(PlayerSheet.QUEUE) }, modifier = Modifier.glassyButton(c.isGlassy, size = 40.dp)) { Icon(Icons.AutoMirrored.Filled.QueueMusic, t("queue"), tint = Color.White) }
     }
 }
 
