@@ -58,6 +58,7 @@ import com.spotifree.app.data.db.DownloadState
 import com.spotifree.app.data.model.Track
 import com.spotifree.app.ui.LocalGraph
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glass.liquidGlassCard
 import com.spotifree.app.ui.theme.glassyButton
 import com.spotifree.app.ui.theme.glassyCard
 
@@ -228,10 +229,25 @@ fun ShelfCard(
     onPlay: (() -> Unit)? = null,
 ) {
     val c = LocalSpotifreeColors.current
+    val shape = RoundedCornerShape(if (c.isGlassy) 14.dp else 8.dp)
     Column(
         Modifier
             .width(width)
-            .clip(RoundedCornerShape(8.dp))
+            .then(
+                if (c.isGlassy) {
+                    Modifier.liquidGlassCard(
+                        isGlassy = true,
+                        shape = shape,
+                        accent = c.accent,
+                        surfaceAlpha = 0.08f,
+                        borderAlpha = 0.28f,
+                        shadowElevation = 4.dp,
+                        interactive = true
+                    )
+                } else {
+                    Modifier.clip(shape)
+                }
+            )
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(4.dp),
     ) {

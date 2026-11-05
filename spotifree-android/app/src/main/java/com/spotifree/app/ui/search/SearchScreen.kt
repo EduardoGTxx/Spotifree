@@ -212,7 +212,7 @@ fun SearchScreen() {
                 if (!actions2.openLink(text)) graph.messages.post(strings["noLinkInClipboard"], isError = true)
             }
         }
-        val searchShape = RoundedCornerShape(if (c.isGlassy) 16.dp else 8.dp)
+        val searchShape = if (c.isGlassy) CircleShape else RoundedCornerShape(8.dp)
         TextField(
             value = ui.query,
             onValueChange = vm::onQuery,

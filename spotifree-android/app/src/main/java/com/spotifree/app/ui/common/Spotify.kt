@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glass.liquidGlass
+import com.spotifree.app.ui.theme.glass.liquidGlassCard
 import com.spotifree.app.ui.theme.onColor
 
 /*
@@ -109,14 +111,24 @@ fun OutlinePill(
     onClick: () -> Unit,
 ) {
     val c = LocalSpotifreeColors.current
-    val actualBorder = if (c.isGlassy) Color.White.copy(alpha = 0.35f) else borderColor
-    val actualBg = if (c.isGlassy) Color.White.copy(alpha = 0.10f) else Color.Transparent
     Row(
         modifier
             .height(36.dp)
-            .clip(CircleShape)
-            .background(actualBg)
-            .border(1.dp, actualBorder, CircleShape)
+            .then(
+                if (c.isGlassy) {
+                    Modifier.liquidGlass(
+                        isGlassy = true,
+                        shape = CircleShape,
+                        surfaceAlpha = 0.10f,
+                        borderAlpha = 0.45f,
+                        blurRadius = 8.dp,
+                        shadowElevation = 2.dp,
+                        interactive = true
+                    )
+                } else {
+                    Modifier.clip(CircleShape).background(Color.Transparent).border(1.dp, borderColor, CircleShape)
+                }
+            )
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -202,16 +214,22 @@ fun GradientIcon(colors: List<Color>, icon: ImageVector, size: Dp, modifier: Mod
 @Composable
 fun CategoryCard(title: String, color: Color, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val c = LocalSpotifreeColors.current
-    val shape = RoundedCornerShape(if (c.isGlassy) 14.dp else 8.dp)
+    val shape = RoundedCornerShape(if (c.isGlassy) 16.dp else 8.dp)
     Box(
         modifier.height(100.dp)
             .then(
                 if (c.isGlassy) {
                     Modifier
-                        .shadow(8.dp, shape, spotColor = color.copy(alpha = 0.35f))
-                        .clip(shape)
-                        .background(Brush.linearGradient(listOf(color.copy(alpha = 0.88f), color.copy(red = color.red * 0.7f, green = color.green * 0.7f, blue = color.blue * 0.7f, alpha = 0.88f))))
-                        .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.12f))), shape)
+                        .liquidGlassCard(
+                            isGlassy = true,
+                            shape = shape,
+                            accent = color,
+                            surfaceAlpha = 0.22f,
+                            borderAlpha = 0.50f,
+                            shadowElevation = 8.dp,
+                            interactive = true
+                        )
+                        .background(Brush.linearGradient(listOf(color.copy(alpha = 0.55f), color.copy(alpha = 0.25f))))
                 } else {
                     Modifier.clip(shape).background(Brush.linearGradient(listOf(color, color.copy(red = color.red * 0.8f, green = color.green * 0.8f, blue = color.blue * 0.8f))))
                 }
@@ -292,28 +310,28 @@ fun SeekBar(fraction: Float, onPreview: (Float?) -> Unit, onSeek: (Float) -> Uni
 @Composable
 fun ActionPill(text: String, icon: ImageVector? = null, primary: Boolean = true, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val c = LocalSpotifreeColors.current
-    val bg = if (primary) {
-        if (c.isGlassy) Brush.verticalGradient(listOf(c.accent, c.accent.copy(alpha = 0.85f)))
-        else Brush.linearGradient(listOf(c.accent, c.accent))
-    } else {
-        if (c.isGlassy) Brush.linearGradient(listOf(Color.White.copy(alpha = 0.18f), Color.White.copy(alpha = 0.10f)))
-        else Brush.linearGradient(listOf(Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.12f)))
-    }
-    val fg = if (primary) onColor(c.accent) else Color.White
+    val fg = if (primary && !c.isGlassy) onColor(c.accent) else Color.White
     Row(
         modifier
             .height(44.dp)
-            .shadow(if (c.isGlassy) 8.dp else 0.dp, CircleShape, spotColor = if (c.isGlassy && primary) c.accent.copy(alpha = 0.45f) else Color.Black)
-            .clip(CircleShape)
-            .background(bg)
             .then(
                 if (c.isGlassy) {
-                    Modifier.border(
-                        1.dp,
-                        if (primary) Color.White.copy(alpha = 0.50f) else Color.White.copy(alpha = 0.28f),
-                        CircleShape
-                    )
-                } else Modifier
+                    Modifier
+                        .liquidGlass(
+                            isGlassy = true,
+                            shape = CircleShape,
+                            accent = if (primary) c.accent else Color.Transparent,
+                            surfaceAlpha = if (primary) 0.35f else 0.14f,
+                            borderAlpha = if (primary) 0.65f else 0.35f,
+                            blurRadius = 14.dp,
+                            shadowElevation = if (primary) 10.dp else 4.dp,
+                            interactive = true
+                        )
+                        .then(if (primary) Modifier.background(c.accent.copy(alpha = 0.40f)) else Modifier)
+                } else {
+                    val bg = if (primary) Brush.linearGradient(listOf(c.accent, c.accent)) else Brush.linearGradient(listOf(Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.12f)))
+                    Modifier.clip(CircleShape).background(bg)
+                }
             )
             .clickable(onClick = onClick)
             .padding(horizontal = 20.dp),

@@ -94,6 +94,7 @@ import com.spotifree.app.ui.common.TrackRow
 import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glass.liquidGlassCard
 import com.spotifree.app.ui.theme.glassyButton
 import com.spotifree.app.ui.theme.glassyCard
 import kotlinx.coroutines.Job
@@ -348,17 +349,21 @@ private data class Tile(val title: String, val image: String?, val colors: List<
 @Composable
 private fun QuickTile(tile: Tile, modifier: Modifier) {
     val c = LocalSpotifreeColors.current
-    val shape = RoundedCornerShape(if (c.isGlassy) 12.dp else 6.dp)
+    val shape = RoundedCornerShape(if (c.isGlassy) 14.dp else 6.dp)
     Row(
         modifier
             .height(56.dp)
             .then(
                 if (c.isGlassy) {
-                    Modifier
-                        .shadow(6.dp, shape, spotColor = c.accent.copy(alpha = 0.25f))
-                        .clip(shape)
-                        .background(Color.White.copy(alpha = 0.14f))
-                        .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.10f))), shape)
+                    Modifier.liquidGlassCard(
+                        isGlassy = true,
+                        shape = shape,
+                        accent = c.accent,
+                        surfaceAlpha = 0.16f,
+                        borderAlpha = 0.42f,
+                        shadowElevation = 6.dp,
+                        interactive = true
+                    )
                 } else {
                     Modifier.clip(shape).background(Color.White.copy(alpha = 0.08f))
                 }
