@@ -91,6 +91,7 @@ import com.spotifree.app.ui.common.formatMs
 import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glassyWaveBackground
 import com.spotifree.app.ui.theme.glass.liquidGlass
 import com.spotifree.app.ui.theme.glass.liquidGlassButton
 import com.spotifree.app.ui.theme.glassyButton
@@ -126,15 +127,15 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
-            val npGlassyWave = if (c.isGlassy) com.spotifree.app.ui.theme.rememberGlassyWaveBrush(animated) else null
+            val fallback = if (c.amoled) Color.Black else c.background
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(
-                        if (c.isGlassy && npGlassyWave != null) {
-                            npGlassyWave
+                    .then(
+                        if (c.isGlassy) {
+                            Modifier.glassyWaveBackground(isGlassy = true, accent = animated)
                         } else {
-                            Brush.verticalGradient(listOf(animated, if (c.amoled) Color.Black else c.background))
+                            Modifier.background(Brush.verticalGradient(listOf(animated, fallback)))
                         }
                     )
                     .pointerInput(Unit) {

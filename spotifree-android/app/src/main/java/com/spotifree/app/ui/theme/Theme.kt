@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -112,6 +114,79 @@ fun glassyGradient(accent: Color): List<Color> {
     return listOf(topOpaque, midOpaque, bottomOpaque, baseBg)
 }
 
+
+/**
+ * Animated musical wave background: draws fluid acoustic wave harmonics during the Draw phase,
+ * preventing continuous 60-120 FPS recompositions of parent and child layouts.
+ */
+fun Modifier.glassyWaveBackground(
+    isGlassy: Boolean,
+    accent: Color,
+    fallback: Color = Color.Transparent,
+): Modifier = if (!isGlassy) {
+    if (fallback != Color.Transparent) this.background(fallback) else this
+} else {
+    composed {
+        val transition = rememberInfiniteTransition(label = "musicWave")
+        val waveOffset by transition.animateFloat(
+            initialValue = 0.25f,
+            targetValue = 0.75f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 4200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "waveOffset"
+        )
+        val harmonicSpread by transition.animateFloat(
+            initialValue = 0.12f,
+            targetValue = 0.22f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 5200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "harmonicSpread"
+        )
+        val crestPulse by transition.animateFloat(
+            initialValue = 0.75f,
+            targetValue = 0.92f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 3200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "crestPulse"
+        )
+        val harmonicPulse by transition.animateFloat(
+            initialValue = 0.40f,
+            targetValue = 0.65f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 2600, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "harmonicPulse"
+        )
+
+        val darkBase = Color(0xFF0A0D18)
+
+        this.drawBehind {
+            val topColor = accent.copy(alpha = crestPulse).compositeOver(darkBase)
+            val midColor = accent.copy(alpha = harmonicPulse).compositeOver(darkBase)
+            val deepBase = accent.copy(alpha = 0.15f).compositeOver(darkBase)
+            val harmonicOffset = (waveOffset + harmonicSpread).coerceIn(waveOffset + 0.08f, 0.96f)
+
+            val brush = Brush.verticalGradient(
+                colorStops = arrayOf(
+                    0.0f to topColor,
+                    waveOffset to midColor,
+                    harmonicOffset to deepBase,
+                    1.0f to darkBase
+                ),
+                startY = 0f,
+                endY = size.height
+            )
+            drawRect(brush)
+        }
+    }
+}
 
 /**
  * Animated musical wave gradient brush: simulates acoustic wave motion (oscillating between dark and lighter

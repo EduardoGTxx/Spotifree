@@ -112,6 +112,7 @@ import com.spotifree.app.ui.settings.UpdateDialog
 import com.spotifree.app.ui.stats.RewindScreen
 import com.spotifree.app.ui.stats.StatsScreen
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
+import com.spotifree.app.ui.theme.glassyWaveBackground
 import com.spotifree.app.ui.theme.glass.liquidGlass
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -278,17 +279,10 @@ fun MainScreen(activity: MainActivity) {
     val destination = backStack?.destination
 
     CompositionLocalProvider(LocalActions provides actions) {
-        val glassyWave = if (c.isGlassy) com.spotifree.app.ui.theme.rememberGlassyWaveBrush(c.accent) else null
         Box(
             Modifier
                 .fillMaxSize()
-                .then(
-                    if (c.isGlassy && glassyWave != null) {
-                        Modifier.background(glassyWave)
-                    } else {
-                        Modifier.background(c.background)
-                    }
-                )
+                .glassyWaveBackground(c.isGlassy, c.accent, c.background)
         ) {
             Scaffold(
                 containerColor = if (c.isGlassy) Color.Transparent else c.background,
