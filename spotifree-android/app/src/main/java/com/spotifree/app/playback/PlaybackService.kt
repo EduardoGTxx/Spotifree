@@ -510,21 +510,24 @@ class PlaybackService : MediaLibraryService() {
         volumeJob = scope.launch {
             while (isActive) {
                 val s = graph.settings.current
-                var fade = 1f
                 val fadeMs = s.crossfadeSec * 1000L
+                var fade = 1f
                 if (fadeMs > 0 && player.isPlaying) {
                     val pos = player.currentPosition
                     val dur = player.duration
-                    if (pos < fadeMs && player.currentMediaItemIndex > 0) fade = (pos.toFloat() / fadeMs).coerceIn(0.05f, 1f)
-                    if (dur > fadeMs * 2 && dur - pos < fadeMs && player.hasNextMediaItem()) {
-                        fade = minOf(fade, ((dur - pos).toFloat() / fadeMs).coerceIn(0f, 1f))
-                    }
+                    fade = AudioEffects.calculateCrossfadeVolume(
+                        positionMs = pos,
+                        durationMs = dur,
+                        crossfadeSec = s.crossfadeSec,
+                        isNextTrack = player.currentMediaItemIndex > 0,
+                        useEqualPower = true,
+                    )
                 }
                 if (sleepJob?.isActive != true || sleepEndsAt - System.currentTimeMillis() > 4000) {
                     val target = fade
-                    if (kotlin.math.abs(player.volume - target) > 0.01f) player.volume = target
+                    if (kotlin.math.abs(player.volume - target) > 0.005f) player.volume = target
                 }
-                delay(if (fadeMs > 0) 100 else 500)
+                delay(if (fadeMs > 0) 50 else 500)
             }
         }
     }
