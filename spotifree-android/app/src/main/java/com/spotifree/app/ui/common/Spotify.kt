@@ -1,5 +1,7 @@
 package com.spotifree.app.ui.common
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,6 +39,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -268,7 +271,8 @@ fun SectionLink(text: String, onClick: () -> Unit) {
 }
 
 /**
- * Spotify-style seek bar: a thin track that thickens while dragging, with a small white thumb.
+ * Spotify-style seek bar: an interactive refractive glass track that smoothly expands
+ * from 4.dp to 8.dp while dragging/scrubbing, with an illuminated glowing thumb.
  * [fraction] is 0..1; [onSeek] receives the final position when the finger lifts.
  */
 @Composable
@@ -276,16 +280,39 @@ fun SeekBar(fraction: Float, onPreview: (Float?) -> Unit, onSeek: (Float) -> Uni
     var dragging by remember { mutableStateOf(false) }
     var dragFraction by remember { mutableStateOf(0f) }
     val shown = if (dragging) dragFraction else fraction.coerceIn(0f, 1f)
+
+    val c = LocalSpotifreeColors.current
+    val isGlassy = c.isGlassy
+
+    val animatedHeight by animateDpAsState(
+        targetValue = if (dragging) 8.dp else 4.dp,
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = 500f),
+        label = "SeekBarHeight"
+    )
+
     BoxWithConstraints(
-        modifier.fillMaxWidth().height(28.dp)
+        modifier
+            .fillMaxWidth()
+            .height(30.dp)
             .pointerInput(Unit) {
                 detectTapGestures { o -> onSeek((o.x / size.width).coerceIn(0f, 1f)) }
             }
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
-                    onDragStart = { o -> dragging = true; dragFraction = (o.x / size.width).coerceIn(0f, 1f); onPreview(dragFraction) },
-                    onDragEnd = { dragging = false; onPreview(null); onSeek(dragFraction) },
-                    onDragCancel = { dragging = false; onPreview(null) },
+                    onDragStart = { o ->
+                        dragging = true
+                        dragFraction = (o.x / size.width).coerceIn(0f, 1f)
+                        onPreview(dragFraction)
+                    },
+                    onDragEnd = {
+                        dragging = false
+                        onPreview(null)
+                        onSeek(dragFraction)
+                    },
+                    onDragCancel = {
+                        dragging = false
+                        onPreview(null)
+                    },
                     onHorizontalDrag = { ch, d ->
                         ch.consume()
                         dragFraction = (dragFraction + d / size.width).coerceIn(0f, 1f)
@@ -295,22 +322,28 @@ fun SeekBar(fraction: Float, onPreview: (Float?) -> Unit, onSeek: (Float) -> Uni
             },
         contentAlignment = Alignment.Center,
     ) {
-        val c = LocalSpotifreeColors.current
         Canvas(Modifier.fillMaxWidth().height(16.dp)) {
             val y = size.height / 2
-            val isGlassy = c.isGlassy
-            val trackStroke = if (isGlassy) (if (dragging) 7.dp.toPx() else 5.dp.toPx()) else (if (dragging) 6.dp.toPx() else 4.dp.toPx())
+            val trackStroke = animatedHeight.toPx()
             val trackColor = if (isGlassy) Color.White.copy(alpha = 0.22f) else color.copy(alpha = 0.25f)
             val activeColor = if (isGlassy) c.accent else color
-            drawLine(trackColor, Offset(0f, y), Offset(size.width, y), trackStroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+
+            // Inactive track
+            drawLine(trackColor, Offset(0f, y), Offset(size.width, y), trackStroke, cap = StrokeCap.Round)
+
             val x = size.width * shown
-            drawLine(activeColor, Offset(0f, y), Offset(x, y), trackStroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            // Active played track
+            drawLine(activeColor, Offset(0f, y), Offset(x, y), trackStroke, cap = StrokeCap.Round)
+
             if (isGlassy) {
-                // Crystal glass bead thumb with rim highlight
-                val thumbR = if (dragging) 10.dp.toPx() else 7.5.dp.toPx()
-                drawCircle(c.accent.copy(alpha = 0.45f), radius = thumbR + 3.dp.toPx(), center = Offset(x, y))
+                // Expanding glowing thumb with caustic rim and core highlight
+                val thumbR = if (dragging) 10.dp.toPx() else 7.dp.toPx()
+                // Outer caustic aura
+                drawCircle(c.accent.copy(alpha = if (dragging) 0.55f else 0.35f), radius = thumbR + 4.dp.toPx(), center = Offset(x, y))
+                // Specular rim
                 drawCircle(Color.White, radius = thumbR, center = Offset(x, y))
-                drawCircle(c.accent, radius = thumbR * 0.42f, center = Offset(x, y))
+                // Glassy core
+                drawCircle(c.accent, radius = thumbR * 0.45f, center = Offset(x, y))
             } else {
                 drawCircle(color, radius = if (dragging) 8.dp.toPx() else 6.dp.toPx(), center = Offset(x, y))
             }
