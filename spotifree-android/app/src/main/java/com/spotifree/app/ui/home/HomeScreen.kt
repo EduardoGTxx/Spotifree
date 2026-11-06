@@ -3,8 +3,6 @@ package com.spotifree.app.ui.home
 import com.spotifree.app.util.runCatchingCancellable
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -94,9 +92,6 @@ import com.spotifree.app.ui.common.TrackRow
 import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
-import com.spotifree.app.ui.theme.glass.liquidGlassCard
-import com.spotifree.app.ui.theme.glassyButton
-import com.spotifree.app.ui.theme.glassyCard
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -225,13 +220,13 @@ fun HomeScreen(
                 item {
                     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(greeting, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { recognizing = true }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.GraphicEq, t("whatsPlaying"), tint = Color.White) }
-                        IconButton(onClick = { actions.nav.navigate(StatsRoute) }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.BarChart, t("statsTitle"), tint = Color.White) }
-                        IconButton(onClick = { actions.nav.navigate(SettingsRoute) }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Outlined.Settings, t("openSettings"), tint = Color.White) }
+                        IconButton(onClick = { recognizing = true }) { Icon(Icons.Default.GraphicEq, t("whatsPlaying")) }
+                        IconButton(onClick = { actions.nav.navigate(StatsRoute) }) { Icon(Icons.Default.BarChart, t("statsTitle")) }
+                        IconButton(onClick = { actions.nav.navigate(SettingsRoute) }) { Icon(Icons.Outlined.Settings, t("openSettings")) }
                     }
                     if (settings.offlineMode) {
                         Row(
-                            Modifier.padding(16.dp, 8.dp).fillMaxWidth().glassyCard(c.isGlassy, RoundedCornerShape(12.dp)).background(if (c.isGlassy) Color.Transparent else c.elevated).padding(12.dp),
+                            Modifier.padding(16.dp, 8.dp).fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(c.elevated).padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(Icons.Default.CloudOff, null, tint = c.accent)
@@ -244,20 +239,8 @@ fun HomeScreen(
                             Modifier
                                 .padding(horizontal = 16.dp, vertical = 6.dp)
                                 .fillMaxWidth()
-                                .then(
-                                    if (c.isGlassy) {
-                                        Modifier.glassyCard(
-                                            isGlassy = true,
-                                            shape = RoundedCornerShape(12.dp),
-                                            accent = c.accent,
-                                            interactive = true
-                                        )
-                                    } else {
-                                        Modifier
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(c.elevated)
-                                    }
-                                )
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(c.elevated)
                                 .clickable { onUpdateClick(u) }
                                 .padding(horizontal = 14.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -360,33 +343,13 @@ private data class Tile(val title: String, val image: String?, val colors: List<
 /** Spotify's two-column shortcut: cover (or coloured icon) on the left, bold title. */
 @Composable
 private fun QuickTile(tile: Tile, modifier: Modifier) {
-    val c = LocalSpotifreeColors.current
-    val shape = RoundedCornerShape(if (c.isGlassy) 14.dp else 6.dp)
     Row(
-        modifier
-            .height(56.dp)
-            .then(
-                if (c.isGlassy) {
-                    Modifier.liquidGlassCard(
-                        isGlassy = true,
-                        shape = shape,
-                        accent = c.accent,
-                        surfaceAlpha = 0.16f,
-                        borderAlpha = 0.42f,
-                        shadowElevation = 6.dp,
-                        interactive = true
-                    )
-                } else {
-                    Modifier.clip(shape).background(Color.White.copy(alpha = 0.08f))
-                }
-            )
-            .clickable(onClick = tile.onClick),
+        modifier.height(56.dp).clip(RoundedCornerShape(6.dp)).background(Color.White.copy(alpha = 0.08f)).clickable(onClick = tile.onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val corner = if (c.isGlassy) 12.dp else 6.dp
-        if (tile.image != null) Artwork(tile.image, size = 56.dp, shape = RoundedCornerShape(topStart = corner, bottomStart = corner))
-        else GradientIcon(tile.colors, tile.icon, 56.dp, Modifier.clip(RoundedCornerShape(topStart = corner, bottomStart = corner)))
-        Text(tile.title, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, fontSize = 13.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp,
+        if (tile.image != null) Artwork(tile.image, size = 56.dp, shape = RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp))
+        else GradientIcon(tile.colors, tile.icon, 56.dp, Modifier.clip(RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp)))
+        Text(tile.title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontSize = 13.sp, fontWeight = FontWeight.Bold, lineHeight = 16.sp,
             modifier = Modifier.padding(horizontal = 10.dp))
     }
 }

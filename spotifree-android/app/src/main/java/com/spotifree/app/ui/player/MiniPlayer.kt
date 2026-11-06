@@ -1,8 +1,6 @@
 package com.spotifree.app.ui.player
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.runtime.mutableStateOf
@@ -19,7 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cast
@@ -51,8 +48,6 @@ import com.spotifree.app.ui.LocalGraph
 import com.spotifree.app.ui.common.Artwork
 import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
-import com.spotifree.app.ui.theme.glass.liquidGlass
-import com.spotifree.app.ui.theme.glassyButton
 
 @Composable
 fun MiniPlayer(onOpen: () -> Unit) {
@@ -64,33 +59,16 @@ fun MiniPlayer(onOpen: () -> Unit) {
     val track = state.current ?: return
     val c = LocalSpotifreeColors.current
     val artworkUrl = rememberTrackArtwork(track)
-    val coverBg by rememberCoverColor(artworkUrl, c.elevated)
-    val bg = if (c.isGlassy) Color.White.copy(alpha = 0.16f) else coverBg
-    val shape = RoundedCornerShape(if (c.isGlassy) 26.dp else 8.dp)
+    val bg by rememberCoverColor(artworkUrl, c.elevated)
     val drag = remember { mutableFloatStateOf(0f) }
     var devices by remember { mutableStateOf(false) }
-    Box(Modifier.padding(horizontal = if (c.isGlassy) 16.dp else 8.dp, vertical = 6.dp)) {
+    Box(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .then(
-                    if (c.isGlassy) {
-                        Modifier.liquidGlass(
-                            isGlassy = true,
-                            shape = shape,
-                            accent = c.accent,
-                            surfaceAlpha = 0.22f,
-                            borderAlpha = 0.58f,
-                            blurRadius = 22.dp,
-                            shadowElevation = 14.dp
-                        )
-                    } else {
-                        Modifier
-                            .shadow(10.dp, shape, spotColor = Color.Black)
-                            .clip(shape)
-                            .background(bg)
-                    }
-                )
+                .shadow(10.dp, RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(8.dp))
+                .background(bg)
                 .clickable(onClick = onOpen)
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
@@ -102,24 +80,24 @@ fun MiniPlayer(onOpen: () -> Unit) {
                     )
                 },
         ) {
-            Row(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Artwork(artworkUrl, size = 44.dp, shape = RoundedCornerShape(if (c.isGlassy) 14.dp else 6.dp))
+            Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Artwork(artworkUrl, size = 42.dp)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(track.title, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium,
+                    Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.basicMarquee(iterations = 2, initialDelayMillis = 2500))
-                    Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall)
+                    Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall)
                 }
                 // Previous app: devices button right in the mini player
-                IconButton(onClick = { devices = true }, modifier = Modifier.glassyButton(c.isGlassy, size = 36.dp)) {
+                IconButton(onClick = { devices = true }) {
                     Icon(if (state.isCasting) Icons.Default.Cast else Icons.Default.Devices, null,
-                        tint = if (state.isCasting) c.accent else Color.White, modifier = Modifier.size(22.dp))
+                        tint = if (state.isCasting) c.accent else Color.White.copy(alpha = 0.85f), modifier = Modifier.size(22.dp))
                 }
-                IconButton(onClick = { actions.toggleLike(track) }, modifier = Modifier.glassyButton(c.isGlassy, size = 36.dp)) {
+                IconButton(onClick = { actions.toggleLike(track) }) {
                     val isLiked = track.id in liked
-                    Icon(if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (isLiked) c.accent else Color.White, modifier = Modifier.size(22.dp))
+                    Icon(if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (isLiked) c.accent else Color.White)
                 }
-                IconButton(onClick = { graph.player.togglePlay() }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) {
+                IconButton(onClick = { graph.player.togglePlay() }) {
                     if (state.isBuffering && state.isPlaying.not()) {
                         CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = Color.White)
                     } else {
@@ -131,13 +109,9 @@ fun MiniPlayer(onOpen: () -> Unit) {
             if (devices) DevicesSheet(onDismiss = { devices = false })
             LinearProgressIndicator(
                 progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp)
-                    .height(if (c.isGlassy) 3.dp else 2.dp)
-                    .clip(CircleShape),
-                color = if (c.isGlassy) c.accent else Color.White,
-                trackColor = Color.White.copy(alpha = 0.18f),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp).height(2.dp),
+                color = Color.White,
+                trackColor = Color.White.copy(alpha = 0.2f),
                 drawStopIndicator = {},
             )
         }

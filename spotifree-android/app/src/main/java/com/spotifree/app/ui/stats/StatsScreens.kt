@@ -2,9 +2,6 @@ package com.spotifree.app.ui.stats
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -171,22 +168,7 @@ private fun StatsBody(d: StatsData) {
 @Composable
 private fun StatCard(label: String, value: String, modifier: Modifier) {
     val c = LocalSpotifreeColors.current
-    val shape = RoundedCornerShape(14.dp)
-    Column(
-        modifier
-            .then(
-                if (c.isGlassy) {
-                    Modifier
-                        .shadow(8.dp, shape, spotColor = c.accent.copy(alpha = 0.25f))
-                        .clip(shape)
-                        .background(Color.White.copy(alpha = 0.14f))
-                        .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.10f))), shape)
-                } else {
-                    Modifier.clip(shape).background(c.elevated)
-                }
-            )
-            .padding(16.dp)
-    ) {
+    Column(modifier.clip(RoundedCornerShape(12.dp)).background(c.elevated).padding(16.dp)) {
         Text(value, style = MaterialTheme.typography.headlineMedium, color = c.accent)
         Text(label, color = c.textSecondary, style = MaterialTheme.typography.bodySmall)
     }

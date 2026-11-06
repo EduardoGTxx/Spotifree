@@ -1,7 +1,5 @@
 package com.spotifree.app.ui.common
 
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,7 +37,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -51,8 +48,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
-import com.spotifree.app.ui.theme.glass.liquidGlass
-
 import com.spotifree.app.ui.theme.onColor
 
 /*
@@ -70,29 +65,10 @@ fun Pill(
     onClick: () -> Unit,
 ) {
     val c = LocalSpotifreeColors.current
-    val bg = if (selected) {
-        if (c.isGlassy) c.accent.copy(alpha = 0.88f) else c.accent
-    } else {
-        if (c.isGlassy) Color.White.copy(alpha = 0.16f) else c.chip
-    }
+    val bg = if (selected) c.accent else c.chip
     val fg = if (selected) onColor(c.accent) else Color.White
     Row(
-        modifier
-            .height(34.dp)
-            .shadow(if (c.isGlassy && selected) 6.dp else 0.dp, CircleShape, spotColor = c.accent)
-            .clip(CircleShape)
-            .background(bg)
-            .then(
-                if (c.isGlassy) {
-                    Modifier.border(
-                        1.dp,
-                        if (selected) Color.White.copy(alpha = 0.50f) else Color.White.copy(alpha = 0.22f),
-                        CircleShape
-                    )
-                } else Modifier
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp),
+        modifier.height(34.dp).clip(CircleShape).background(bg).clickable(onClick = onClick).padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
@@ -113,27 +89,8 @@ fun OutlinePill(
     borderColor: Color = Color.White.copy(alpha = 0.3f),
     onClick: () -> Unit,
 ) {
-    val c = LocalSpotifreeColors.current
     Row(
-        modifier
-            .height(36.dp)
-            .then(
-                if (c.isGlassy) {
-                    Modifier.liquidGlass(
-                        isGlassy = true,
-                        shape = CircleShape,
-                        surfaceAlpha = 0.10f,
-                        borderAlpha = 0.45f,
-                        blurRadius = 8.dp,
-                        shadowElevation = 2.dp,
-                        interactive = true
-                    )
-                } else {
-                    Modifier.clip(CircleShape).background(Color.Transparent).border(1.dp, borderColor, CircleShape)
-                }
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp),
+        modifier.height(36.dp).clip(CircleShape).border(1.dp, borderColor, CircleShape).clickable(onClick = onClick).padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
@@ -157,24 +114,8 @@ fun <T> PillRow(options: List<Pair<T, String>>, selected: T, contentPadding: Pad
 fun PlayFab(onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 56.dp, enabled: Boolean = true, icon: ImageVector = Icons.Default.PlayArrow) {
     val c = LocalSpotifreeColors.current
     Box(
-        modifier.size(size)
-            .shadow(if (enabled) 10.dp else 0.dp, CircleShape, spotColor = if (c.isGlassy) c.accent.copy(alpha = 0.5f) else Color.Black)
-            .clip(CircleShape)
-            .background(
-                if (enabled) {
-                    if (c.isGlassy) Brush.verticalGradient(listOf(c.accent, c.accent.copy(alpha = 0.85f)))
-                    else Brush.linearGradient(listOf(c.accent, c.accent))
-                } else Brush.linearGradient(listOf(c.elevated, c.elevated))
-            )
-            .then(
-                if (c.isGlassy && enabled) {
-                    Modifier.border(
-                        1.5.dp,
-                        Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.6f), Color.White.copy(alpha = 0.15f))),
-                        CircleShape
-                    )
-                } else Modifier
-            )
+        modifier.size(size).shadow(if (enabled) 8.dp else 0.dp, CircleShape).clip(CircleShape)
+            .background(if (enabled) c.accent else c.elevated)
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -186,23 +127,10 @@ fun PlayFab(onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 56.dp
 @Composable
 fun TopGlow(color: Color, height: Dp = 280.dp, modifier: Modifier = Modifier) {
     val c = LocalSpotifreeColors.current
-    if (c.isGlassy) {
-        Box(
-            modifier.fillMaxWidth().height(height)
-                .background(
-                    Brush.verticalGradient(
-                        0f to color.copy(alpha = 0.55f),
-                        0.7f to color.copy(alpha = 0.20f),
-                        1f to Color.Transparent
-                    )
-                ),
-        )
-    } else {
-        Box(
-            modifier.fillMaxWidth().height(height)
-                .background(Brush.verticalGradient(0f to color.copy(alpha = 0.45f), 0.75f to c.background.copy(alpha = 0.9f), 1f to c.background)),
-        )
-    }
+    Box(
+        modifier.fillMaxWidth().height(height)
+            .background(Brush.verticalGradient(0f to color.copy(alpha = 0.45f), 0.75f to c.background.copy(alpha = 0.9f), 1f to c.background)),
+    )
 }
 
 /** A colourful gradient square with an icon: covers for shortcuts that have no picture. */
@@ -216,43 +144,13 @@ fun GradientIcon(colors: List<Color>, icon: ImageVector, size: Dp, modifier: Mod
 /** "Browse all" category card: bold title and a tilted icon tile in the corner. */
 @Composable
 fun CategoryCard(title: String, color: Color, icon: ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val c = LocalSpotifreeColors.current
-    val shape = RoundedCornerShape(if (c.isGlassy) 16.dp else 8.dp)
-    val cardModifier = if (c.isGlassy) {
-        val spotColor = color.copy(alpha = 0.35f)
-        val glassBrush = Brush.verticalGradient(
-            colors = listOf(
-                Color.White.copy(alpha = 0.50f),
-                Color.White.copy(alpha = 0.22f),
-                Color.White.copy(alpha = 0.06f),
-                color.copy(alpha = 0.35f)
-            )
-        )
-        Modifier
-            .shadow(8.dp, shape, spotColor = spotColor, ambientColor = spotColor)
-            .clip(shape)
-            .background(Brush.linearGradient(listOf(color.copy(alpha = 0.55f), color.copy(alpha = 0.25f))))
-            .border(1.dp, glassBrush, shape)
-    } else {
-        Modifier
-            .clip(shape)
-            .background(Brush.linearGradient(listOf(color, color.copy(red = color.red * 0.8f, green = color.green * 0.8f, blue = color.blue * 0.8f))))
-    }
     Box(
-        modifier
-            .height(100.dp)
-            .then(cardModifier)
+        modifier.height(100.dp).clip(RoundedCornerShape(8.dp))
+            .background(Brush.linearGradient(listOf(color, color.copy(red = color.red * 0.8f, green = color.green * 0.8f, blue = color.blue * 0.8f))))
             .clickable(onClick = onClick),
     ) {
-        Text(
-            title,
-            color = Color.White,
-            fontWeight = FontWeight.ExtraBold,
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(12.dp).padding(end = 40.dp)
-        )
+        Text(title, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(12.dp).padding(end = 40.dp))
         Box(
             Modifier.align(Alignment.BottomEnd).offset(x = 10.dp, y = 6.dp).rotate(25f).size(62.dp)
                 .shadow(6.dp, RoundedCornerShape(6.dp)).clip(RoundedCornerShape(6.dp))
@@ -271,8 +169,7 @@ fun SectionLink(text: String, onClick: () -> Unit) {
 }
 
 /**
- * Spotify-style seek bar: an interactive refractive glass track that smoothly expands
- * from 4.dp to 8.dp while dragging/scrubbing, with an illuminated glowing thumb.
+ * Spotify-style seek bar: a thin track that thickens while dragging, with a small white thumb.
  * [fraction] is 0..1; [onSeek] receives the final position when the finger lifts.
  */
 @Composable
@@ -280,39 +177,16 @@ fun SeekBar(fraction: Float, onPreview: (Float?) -> Unit, onSeek: (Float) -> Uni
     var dragging by remember { mutableStateOf(false) }
     var dragFraction by remember { mutableStateOf(0f) }
     val shown = if (dragging) dragFraction else fraction.coerceIn(0f, 1f)
-
-    val c = LocalSpotifreeColors.current
-    val isGlassy = c.isGlassy
-
-    val animatedHeight by animateDpAsState(
-        targetValue = if (dragging) 8.dp else 4.dp,
-        animationSpec = spring(dampingRatio = 0.65f, stiffness = 500f),
-        label = "SeekBarHeight"
-    )
-
     BoxWithConstraints(
-        modifier
-            .fillMaxWidth()
-            .height(30.dp)
+        modifier.fillMaxWidth().height(28.dp)
             .pointerInput(Unit) {
                 detectTapGestures { o -> onSeek((o.x / size.width).coerceIn(0f, 1f)) }
             }
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
-                    onDragStart = { o ->
-                        dragging = true
-                        dragFraction = (o.x / size.width).coerceIn(0f, 1f)
-                        onPreview(dragFraction)
-                    },
-                    onDragEnd = {
-                        dragging = false
-                        onPreview(null)
-                        onSeek(dragFraction)
-                    },
-                    onDragCancel = {
-                        dragging = false
-                        onPreview(null)
-                    },
+                    onDragStart = { o -> dragging = true; dragFraction = (o.x / size.width).coerceIn(0f, 1f); onPreview(dragFraction) },
+                    onDragEnd = { dragging = false; onPreview(null); onSeek(dragFraction) },
+                    onDragCancel = { dragging = false; onPreview(null) },
                     onHorizontalDrag = { ch, d ->
                         ch.consume()
                         dragFraction = (dragFraction + d / size.width).coerceIn(0f, 1f)
@@ -322,31 +196,13 @@ fun SeekBar(fraction: Float, onPreview: (Float?) -> Unit, onSeek: (Float) -> Uni
             },
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(Modifier.fillMaxWidth().height(16.dp)) {
+        Canvas(Modifier.fillMaxWidth().height(14.dp)) {
             val y = size.height / 2
-            val trackStroke = animatedHeight.toPx()
-            val trackColor = if (isGlassy) Color.White.copy(alpha = 0.22f) else color.copy(alpha = 0.25f)
-            val activeColor = if (isGlassy) c.accent else color
-
-            // Inactive track
-            drawLine(trackColor, Offset(0f, y), Offset(size.width, y), trackStroke, cap = StrokeCap.Round)
-
+            val stroke = if (dragging) 6.dp.toPx() else 4.dp.toPx()
+            drawLine(color.copy(alpha = 0.25f), Offset(0f, y), Offset(size.width, y), stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
             val x = size.width * shown
-            // Active played track
-            drawLine(activeColor, Offset(0f, y), Offset(x, y), trackStroke, cap = StrokeCap.Round)
-
-            if (isGlassy) {
-                // Expanding glowing thumb with caustic rim and core highlight
-                val thumbR = if (dragging) 10.dp.toPx() else 7.dp.toPx()
-                // Outer caustic aura
-                drawCircle(c.accent.copy(alpha = if (dragging) 0.55f else 0.35f), radius = thumbR + 4.dp.toPx(), center = Offset(x, y))
-                // Specular rim
-                drawCircle(Color.White, radius = thumbR, center = Offset(x, y))
-                // Glassy core
-                drawCircle(c.accent, radius = thumbR * 0.45f, center = Offset(x, y))
-            } else {
-                drawCircle(color, radius = if (dragging) 8.dp.toPx() else 6.dp.toPx(), center = Offset(x, y))
-            }
+            drawLine(color, Offset(0f, y), Offset(x, y), stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            drawCircle(color, radius = if (dragging) 8.dp.toPx() else 6.dp.toPx(), center = Offset(x, y))
         }
     }
 }
@@ -355,31 +211,10 @@ fun SeekBar(fraction: Float, onPreview: (Float?) -> Unit, onSeek: (Float) -> Uni
 @Composable
 fun ActionPill(text: String, icon: ImageVector? = null, primary: Boolean = true, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val c = LocalSpotifreeColors.current
-    val fg = if (primary && !c.isGlassy) onColor(c.accent) else Color.White
+    val bg = if (primary) c.accent else Color.White.copy(alpha = 0.12f)
+    val fg = if (primary) onColor(c.accent) else Color.White
     Row(
-        modifier
-            .height(44.dp)
-            .then(
-                if (c.isGlassy) {
-                    Modifier
-                        .liquidGlass(
-                            isGlassy = true,
-                            shape = CircleShape,
-                            accent = if (primary) c.accent else Color.Transparent,
-                            surfaceAlpha = if (primary) 0.35f else 0.14f,
-                            borderAlpha = if (primary) 0.65f else 0.35f,
-                            blurRadius = 14.dp,
-                            shadowElevation = if (primary) 10.dp else 4.dp,
-                            interactive = true
-                        )
-                        .then(if (primary) Modifier.background(c.accent.copy(alpha = 0.40f)) else Modifier)
-                } else {
-                    val bg = if (primary) Brush.linearGradient(listOf(c.accent, c.accent)) else Brush.linearGradient(listOf(Color.White.copy(alpha = 0.12f), Color.White.copy(alpha = 0.12f)))
-                    Modifier.clip(CircleShape).background(bg)
-                }
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp),
+        modifier.height(44.dp).clip(CircleShape).background(bg).clickable(onClick = onClick).padding(horizontal = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {

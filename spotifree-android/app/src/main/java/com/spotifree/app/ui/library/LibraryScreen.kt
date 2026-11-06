@@ -27,8 +27,6 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -102,8 +100,6 @@ import com.spotifree.app.ui.common.NameDialog
 import com.spotifree.app.ui.i18n.LocalStrings
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
-import com.spotifree.app.ui.theme.glassyButton
-import com.spotifree.app.ui.theme.glassyCard
 import kotlinx.coroutines.launch
 
 private enum class LibFilter { ALL, PLAYLISTS, ARTISTS, DOWNLOADED }
@@ -205,9 +201,9 @@ fun LibraryScreen() {
         item {
             Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(t("libraryTitle"), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                IconButton(onClick = { actions.nav.navigate(com.spotifree.app.ui.StatsRoute) }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.BarChart, t("statsTitle"), tint = c.accent) }
-                IconButton(onClick = { actions.nav.navigate(com.spotifree.app.ui.SearchRoute) }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.Search, null) }
-                IconButton(onClick = { showAdd = true }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.Add, null) }
+                IconButton(onClick = { actions.nav.navigate(com.spotifree.app.ui.StatsRoute) }) { Icon(Icons.Default.BarChart, t("statsTitle"), tint = c.accent) }
+                IconButton(onClick = { actions.nav.navigate(com.spotifree.app.ui.SearchRoute) }) { Icon(Icons.Default.Search, null) }
+                IconButton(onClick = { showAdd = true }) { Icon(Icons.Default.Add, null) }
             }
             val chips = listOf(
                 LibFilter.ALL to t("filterAll"),
@@ -237,7 +233,7 @@ fun LibraryScreen() {
         // Sort + list/grid toggle
         item {
             Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 4.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Row(Modifier.then(if (c.isGlassy) Modifier.glassyCard(true, CircleShape, alpha = 0.12f, shadowElevation = 2.dp) else Modifier.clip(CircleShape)).clickable { alphabetical = !alphabetical }.padding(horizontal = 8.dp, vertical = 6.dp),
+                Row(Modifier.clip(CircleShape).clickable { alphabetical = !alphabetical }.padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.AutoMirrored.Filled.Sort, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
@@ -262,7 +258,7 @@ fun LibraryScreen() {
         // Empty library: the previous app's call to action
         if (filter == LibFilter.ALL && userLists.isEmpty() && artists.isEmpty()) item {
             Column(
-                Modifier.padding(16.dp).fillMaxWidth().glassyCard(c.isGlassy, RoundedCornerShape(16.dp)).background(if (c.isGlassy) Color.Transparent else c.surface).padding(24.dp),
+                Modifier.padding(16.dp).fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(c.surface).padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Icon(Icons.Default.MusicNote, null, tint = c.textSecondary, modifier = Modifier.size(44.dp))
@@ -283,7 +279,7 @@ fun LibraryScreen() {
     }
 
     if (showAdd) {
-        ModalBottomSheet(onDismissRequest = { showAdd = false }, containerColor = if (c.isGlassy) Color(0xF0121626) else c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
+        ModalBottomSheet(onDismissRequest = { showAdd = false }, containerColor = c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
             Column(Modifier.navigationBarsPadding()) {
                 MenuItem(Icons.Default.PlaylistAdd, t("newPlaylist")) { showAdd = false; creating = true }
                 MenuItem(Icons.Default.FileUpload, t("importCsv")) {
@@ -318,7 +314,7 @@ fun LibraryScreen() {
         }
     }
     ytLists?.let { lists ->
-        ModalBottomSheet(onDismissRequest = { ytLists = null }, containerColor = if (c.isGlassy) Color(0xF0121626) else c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
+        ModalBottomSheet(onDismissRequest = { ytLists = null }, containerColor = c.elevated, contentColor = androidx.compose.ui.graphics.Color.White) {
             Text(t("yourYouTubePlaylists"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
             if (ytLoading) LoadingBox()
             else if (lists.isEmpty()) Text(t("noPlaylistsFound"), color = c.textSecondary, modifier = Modifier.padding(20.dp))
@@ -401,27 +397,14 @@ private fun GridEntry(e: LibEntry, modifier: Modifier) {
 /** Gradient card of an automatic mix with a round play button (previous app). */
 @Composable
 private fun MixCard(title: String, subtitle: String, colors: List<Color>, onPlay: () -> Unit) {
-    val c = LocalSpotifreeColors.current
-    val shape = RoundedCornerShape(12.dp)
     Column(
-        Modifier.width(176.dp).height(100.dp)
-            .then(
-                if (c.isGlassy) {
-                    Modifier
-                        .shadow(6.dp, shape, spotColor = colors.firstOrNull()?.copy(alpha = 0.35f) ?: Color.Black)
-                        .clip(shape)
-                        .background(Brush.linearGradient(colors.map { it.copy(alpha = 0.85f) }))
-                        .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.12f))), shape)
-                } else {
-                    Modifier.clip(shape).background(Brush.linearGradient(colors))
-                }
-            )
+        Modifier.width(176.dp).height(100.dp).clip(RoundedCornerShape(12.dp)).background(Brush.linearGradient(colors))
             .clickable(onClick = onPlay).padding(14.dp),
     ) {
         Row(verticalAlignment = Alignment.Top) {
             Text(title, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp, lineHeight = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f))
-            Box(Modifier.size(30.dp).clip(CircleShape).background(if (c.isGlassy) Color.White.copy(alpha = 0.25f) else Color.Black.copy(alpha = 0.3f)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(30.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.3f)), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(20.dp))
             }
         }

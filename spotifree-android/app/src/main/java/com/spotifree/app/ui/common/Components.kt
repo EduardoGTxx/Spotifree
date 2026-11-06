@@ -58,9 +58,6 @@ import com.spotifree.app.data.db.DownloadState
 import com.spotifree.app.data.model.Track
 import com.spotifree.app.ui.LocalGraph
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
-import com.spotifree.app.ui.theme.glass.liquidGlassCard
-import com.spotifree.app.ui.theme.glassyButton
-import com.spotifree.app.ui.theme.glassyCard
 
 fun formatDuration(sec: Int): String {
     if (sec <= 0) return ""
@@ -199,7 +196,7 @@ fun TrackRow(
         }
         trailing?.invoke()
         if (onMore != null) {
-            IconButton(onClick = onMore, modifier = Modifier.glassyButton(c.isGlassy, size = 32.dp)) { Icon(Icons.Default.MoreVert, null, tint = if (c.isGlassy) Color.White else c.textSecondary, modifier = Modifier.size(18.dp)) }
+            IconButton(onClick = onMore) { Icon(Icons.Default.MoreVert, null, tint = c.textSecondary) }
         }
     }
 }
@@ -229,25 +226,10 @@ fun ShelfCard(
     onPlay: (() -> Unit)? = null,
 ) {
     val c = LocalSpotifreeColors.current
-    val shape = RoundedCornerShape(if (c.isGlassy) 14.dp else 8.dp)
     Column(
         Modifier
             .width(width)
-            .then(
-                if (c.isGlassy) {
-                    Modifier.liquidGlassCard(
-                        isGlassy = true,
-                        shape = shape,
-                        accent = c.accent,
-                        surfaceAlpha = 0.08f,
-                        borderAlpha = 0.28f,
-                        shadowElevation = 4.dp,
-                        interactive = true
-                    )
-                } else {
-                    Modifier.clip(shape)
-                }
-            )
+            .clip(RoundedCornerShape(8.dp))
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(4.dp),
     ) {
@@ -258,10 +240,10 @@ fun ShelfCard(
             if (onPlay != null) PlayFab(onPlay, Modifier.align(Alignment.BottomEnd).padding(8.dp), size = 38.dp)
         }
         Spacer(Modifier.height(8.dp))
-        Text(title, color = Color.White, maxLines = if (subtitle.isNullOrBlank()) 2 else 1, overflow = TextOverflow.Ellipsis, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+        Text(title, maxLines = if (subtitle.isNullOrBlank()) 2 else 1, overflow = TextOverflow.Ellipsis, fontSize = 13.sp, fontWeight = FontWeight.Bold,
             textAlign = if (circle) TextAlign.Center else TextAlign.Start, modifier = Modifier.fillMaxWidth())
         if (!subtitle.isNullOrBlank()) {
-            Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 12.sp, color = if (c.isGlassy) Color.White.copy(alpha = 0.75f) else c.textSecondary,
+            Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 12.sp, color = c.textSecondary,
                 textAlign = if (circle) TextAlign.Center else TextAlign.Start, modifier = Modifier.fillMaxWidth().padding(top = 2.dp))
         }
     }

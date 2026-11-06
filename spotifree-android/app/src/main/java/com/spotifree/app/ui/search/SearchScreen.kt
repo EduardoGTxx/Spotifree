@@ -25,8 +25,6 @@ import com.spotifree.app.util.runCatchingCancellable
 
 import android.content.Context
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -95,8 +93,6 @@ import com.spotifree.app.ui.common.ShelfCard
 import com.spotifree.app.ui.common.TrackRow
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
-import com.spotifree.app.ui.theme.glassyButton
-import com.spotifree.app.ui.theme.glassyCard
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -212,43 +208,32 @@ fun SearchScreen() {
                 if (!actions2.openLink(text)) graph.messages.post(strings["noLinkInClipboard"], isError = true)
             }
         }
-        val searchShape = if (c.isGlassy) CircleShape else RoundedCornerShape(8.dp)
         TextField(
             value = ui.query,
             onValueChange = vm::onQuery,
-            placeholder = { Text(t("searchPlaceholder"), color = if (c.isGlassy) Color.White.copy(alpha = 0.5f) else Color(0xFF535353), fontWeight = FontWeight.SemiBold) },
-            leadingIcon = { Icon(Icons.Default.Search, null, tint = if (c.isGlassy) Color.White else Color.Black) },
+            placeholder = { Text(t("searchPlaceholder"), color = Color(0xFF535353), fontWeight = FontWeight.SemiBold) },
+            leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Black) },
             trailingIcon = {
-                if (ui.query.isNotEmpty()) IconButton(onClick = vm::clear) { Icon(Icons.Default.Clear, null, tint = if (c.isGlassy) Color.White else Color.Black) }
+                if (ui.query.isNotEmpty()) IconButton(onClick = vm::clear) { Icon(Icons.Default.Clear, null, tint = Color.Black) }
                 else IconButton(onClick = {
                     runCatchingCancellable {
                         voice.launch(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
                             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                             .putExtra(RecognizerIntent.EXTRA_PROMPT, strings["searchPlaceholder"]))
                     }.onFailure { graph.messages.post(strings["voiceUnavailable"], isError = true) }
-                }) { Icon(Icons.Default.Mic, t("voiceSearch"), tint = if (c.isGlassy) Color.White else Color.Black) }
+                }) { Icon(Icons.Default.Mic, t("voiceSearch"), tint = Color.Black) }
             },
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { vm.submit(); focus.clearFocus() }),
-            shape = searchShape,
+            shape = RoundedCornerShape(8.dp),
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = if (c.isGlassy) Color.White.copy(alpha = 0.16f) else Color.White,
-                unfocusedContainerColor = if (c.isGlassy) Color.White.copy(alpha = 0.12f) else Color.White,
-                focusedTextColor = if (c.isGlassy) Color.White else Color.Black,
-                unfocusedTextColor = if (c.isGlassy) Color.White else Color.Black,
-                cursorColor = if (c.isGlassy) c.accent else Color.Black,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
+                focusedContainerColor = Color.White, unfocusedContainerColor = Color.White,
+                focusedTextColor = Color.Black, unfocusedTextColor = Color.Black, cursorColor = Color.Black,
+                focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent,
             ),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                .then(
-                    if (c.isGlassy) Modifier
-                        .shadow(8.dp, searchShape, spotColor = c.accent.copy(alpha = 0.25f))
-                        .border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.40f), Color.White.copy(alpha = 0.10f))), searchShape)
-                    else Modifier
-                ),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         )
         // Filter pills are always visible (previous app); before searching they preselect the type
         val filters = listOf(null to t("filterAll"), SearchFilter.SONGS to t("filterSongs"), SearchFilter.ALBUMS to t("filterAlbums"),
@@ -265,7 +250,7 @@ fun SearchScreen() {
                             Icon(Icons.Default.Search, null, tint = c.textSecondary)
                             Spacer(Modifier.width(16.dp))
                             Text(s, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            IconButton(onClick = { vm.onQuery(s) }, modifier = Modifier.glassyButton(c.isGlassy, size = 32.dp)) { Icon(Icons.Default.NorthWest, null, tint = c.textSecondary) }
+                            IconButton(onClick = { vm.onQuery(s) }) { Icon(Icons.Default.NorthWest, null, tint = c.textSecondary) }
                         }
                     }
                     if (ui.local.isNotEmpty()) {
@@ -289,7 +274,7 @@ fun SearchScreen() {
                                 Icon(Icons.Default.History, null, tint = c.textSecondary)
                                 Spacer(Modifier.width(16.dp))
                                 Text(h, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                IconButton(onClick = { vm.removeHistory(h) }, modifier = Modifier.glassyButton(c.isGlassy, size = 32.dp)) { Icon(Icons.Default.Close, null, tint = c.textSecondary) }
+                                IconButton(onClick = { vm.removeHistory(h) }) { Icon(Icons.Default.Close, null, tint = c.textSecondary) }
                             }
                         }
                     }
@@ -336,7 +321,7 @@ private fun Results(ui: SearchUi, currentId: String?, onRetry: () -> Unit) {
         if (ui.filter == null && top != null) item {
             SectionTitle(t("topResult"))
             Row(
-                Modifier.padding(horizontal = 16.dp).fillMaxWidth().glassyCard(c.isGlassy, RoundedCornerShape(12.dp)).background(if (c.isGlassy) Color.Transparent else c.elevated)
+                Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(c.elevated)
                     .clickable { actions.openArtist(top.url ?: top.name) }.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

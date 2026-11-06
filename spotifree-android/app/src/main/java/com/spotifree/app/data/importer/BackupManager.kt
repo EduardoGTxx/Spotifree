@@ -290,7 +290,6 @@ class BackupManager(
             put("lyricsRomanization", s.lyricsRomanization)
             put("accentColor", s.accentColor)
             put("amoledTheme", s.amoledTheme)
-            put("uiTheme", s.uiTheme)
             put("isOfflineMode", s.offlineMode)
             put("allowMobileData", s.allowMobileData)
             put("recognitionProvider", s.recognitionProvider)
@@ -327,7 +326,6 @@ class BackupManager(
             lyricsRomanization = o.b("lyricsRomanization") ?: s.lyricsRomanization,
             accentColor = o.s("accentColor")?.takeIf { it.startsWith("#") } ?: s.accentColor,
             amoledTheme = o.b("amoledTheme") ?: s.amoledTheme,
-            uiTheme = o.s("uiTheme")?.takeIf { it in listOf("default", "glassy") } ?: s.uiTheme,
             offlineMode = o.b("isOfflineMode") ?: s.offlineMode,
             allowMobileData = o.b("allowMobileData") ?: s.allowMobileData,
             recognitionProvider = o.s("recognitionProvider") ?: s.recognitionProvider,

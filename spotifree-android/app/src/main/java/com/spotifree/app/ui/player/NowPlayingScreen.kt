@@ -1,12 +1,19 @@
 package com.spotifree.app.ui.player
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.filled.Cast
+import androidx.compose.material.icons.filled.DownloadDone
+import androidx.compose.material.icons.outlined.DownloadForOffline
+import androidx.compose.ui.unit.sp
+import com.spotifree.app.data.db.DownloadState
+import com.spotifree.app.ui.common.SeekBar
+
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -16,26 +23,25 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Devices
-import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -44,11 +50,12 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -65,26 +72,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
-import com.spotifree.app.data.db.DownloadState
 import com.spotifree.app.ui.LocalActions
 import com.spotifree.app.ui.LocalGraph
 import com.spotifree.app.ui.MenuContext
 import com.spotifree.app.ui.common.Artwork
-import com.spotifree.app.ui.common.SeekBar
 import com.spotifree.app.ui.common.formatMs
 import com.spotifree.app.ui.common.rememberTrackArtwork
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
-import com.spotifree.app.ui.theme.glass.gelPressClickable
-import com.spotifree.app.ui.theme.glass.liquidGlass
-import com.spotifree.app.ui.theme.glass.liquidGlassButton
-import com.spotifree.app.ui.theme.glassyButton
-import com.spotifree.app.ui.theme.glassyWaveBackground
+import com.spotifree.app.ui.theme.onColor
 
 private enum class PlayerSheet { NONE, QUEUE, SLEEP, EFFECTS, DEVICES }
 
@@ -116,17 +117,10 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
-            val fallback = if (c.amoled) Color.Black else c.background
             Box(
                 Modifier
                     .fillMaxSize()
-                    .then(
-                        if (c.isGlassy) {
-                            Modifier.glassyWaveBackground(isGlassy = true, accent = animated)
-                        } else {
-                            Modifier.background(Brush.verticalGradient(listOf(animated, fallback)))
-                        }
-                    )
+                    .background(Brush.verticalGradient(listOf(animated, if (c.amoled) Color.Black else c.background)))
                     .pointerInput(Unit) {
                         detectVerticalDragGestures(
                             onDragEnd = {
@@ -140,66 +134,14 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                     .navigationBarsPadding(),
             ) {
                 Column(Modifier.fillMaxSize()) {
-                    // Top bar with floating glassy capsule for album title
+                    // Top bar
                     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (c.isGlassy) {
-                            Box(
-                                modifier = Modifier
-                                    .glassyButton(true, size = 40.dp)
-                                    .gelPressClickable(onClick = onClose),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(Icons.Default.KeyboardArrowDown, null, tint = Color.White, modifier = Modifier.size(28.dp))
-                            }
-                        } else {
-                            IconButton(onClick = onClose, modifier = Modifier.size(38.dp)) {
-                                Icon(Icons.Default.KeyboardArrowDown, null, tint = Color.White, modifier = Modifier.size(28.dp))
-                            }
+                        IconButton(onClick = onClose) { Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(30.dp)) }
+                        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(t("nowPlaying").uppercase(), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
+                            Text(track.album.ifBlank { track.artist }, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-
-                        Box(
-                            Modifier
-                                .weight(1f)
-                                .padding(horizontal = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                Modifier
-                                    .then(
-                                        if (c.isGlassy) {
-                                            Modifier
-                                                .liquidGlass(
-                                                    isGlassy = true,
-                                                    shape = CircleShape,
-                                                    surfaceAlpha = 0.14f,
-                                                    borderAlpha = 0.35f,
-                                                    blurRadius = 10.dp,
-                                                    shadowElevation = 4.dp
-                                                )
-                                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                                        } else Modifier
-                                    ),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(t("nowPlaying").uppercase(), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
-                                Text(track.album.ifBlank { track.artist }, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                        }
-
-                        if (c.isGlassy) {
-                            Box(
-                                modifier = Modifier
-                                    .glassyButton(true, size = 40.dp)
-                                    .gelPressClickable(onClick = { actions.showMenu(track, MenuContext()) }),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(Icons.Default.MoreVert, null, tint = Color.White)
-                            }
-                        } else {
-                            IconButton(onClick = { actions.showMenu(track, MenuContext()) }, modifier = Modifier.size(38.dp)) {
-                                Icon(Icons.Default.MoreVert, null, tint = Color.White)
-                            }
-                        }
+                        IconButton(onClick = { actions.showMenu(track, MenuContext()) }) { Icon(Icons.Default.MoreVert, null) }
                     }
 
                     if (landscape) {
@@ -238,27 +180,14 @@ fun NowPlayingScreen(onClose: () -> Unit) {
 @Composable
 private fun CoverArt(url: String?, onSwipe: (Float) -> Unit) {
     val drag = remember { mutableFloatStateOf(0f) }
-    val c = LocalSpotifreeColors.current
-    val shape = RoundedCornerShape(if (c.isGlassy) 28.dp else 8.dp)
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         val side = minOf(maxWidth, maxHeight)
         Artwork(
             url,
             size = side,
-            shape = shape,
+            shape = RoundedCornerShape(8.dp),
             modifier = Modifier
-                .shadow(if (c.isGlassy) 24.dp else 16.dp, shape, spotColor = if (c.isGlassy) c.accent.copy(alpha = 0.45f) else Color.Black)
-                .then(
-                    if (c.isGlassy) {
-                        Modifier.border(
-                            1.5.dp,
-                            Brush.verticalGradient(
-                                listOf(Color.White.copy(alpha = 0.60f), Color.White.copy(alpha = 0.15f))
-                            ),
-                            shape
-                        )
-                    } else Modifier
-                )
+                .shadow(16.dp, RoundedCornerShape(8.dp))
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
                         onDragEnd = {
@@ -286,50 +215,24 @@ private fun TitleRow(title: String, artist: String, liked: Boolean, onLike: () -
             Text(artist, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.clickable(onClick = onArtist))
         }
+        // Previous app: download button beside the heart
         if (track != null && !track.isLocal) {
             val d = downloads[track.id]
-            if (c.isGlassy) {
-                Box(
-                    modifier = Modifier
-                        .glassyButton(true, size = 42.dp)
-                        .gelPressClickable(onClick = { if (d?.state != DownloadState.DONE) actions.download(track) }),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    when (d?.state) {
-                        DownloadState.DONE -> Icon(Icons.Default.DownloadDone, t("downloaded"), tint = c.accent, modifier = Modifier.size(28.dp))
-                        DownloadState.RUNNING, DownloadState.QUEUED -> CircularProgressIndicator(
-                            progress = { d.progress.coerceIn(0.02f, 1f) }, modifier = Modifier.size(24.dp), strokeWidth = 2.5.dp, color = c.accent)
-                        else -> Icon(Icons.Outlined.DownloadForOffline, t("download"), tint = Color.White, modifier = Modifier.size(28.dp))
-                    }
-                }
-            } else {
-                IconButton(onClick = { if (d?.state != DownloadState.DONE) actions.download(track) }, modifier = Modifier.size(42.dp)) {
-                    when (d?.state) {
-                        DownloadState.DONE -> Icon(Icons.Default.DownloadDone, t("downloaded"), tint = c.accent, modifier = Modifier.size(28.dp))
-                        DownloadState.RUNNING, DownloadState.QUEUED -> CircularProgressIndicator(
-                            progress = { d.progress.coerceIn(0.02f, 1f) }, modifier = Modifier.size(24.dp), strokeWidth = 2.5.dp, color = c.accent)
-                        else -> Icon(Icons.Outlined.DownloadForOffline, t("download"), tint = Color.White, modifier = Modifier.size(28.dp))
-                    }
+            IconButton(onClick = { if (d?.state != DownloadState.DONE) actions.download(track) }) {
+                when (d?.state) {
+                    DownloadState.DONE -> Icon(Icons.Default.DownloadDone, t("downloaded"), tint = c.accent, modifier = Modifier.size(28.dp))
+                    DownloadState.RUNNING, DownloadState.QUEUED -> CircularProgressIndicator(
+                        progress = { d.progress.coerceIn(0.02f, 1f) }, modifier = Modifier.size(24.dp), strokeWidth = 2.5.dp, color = c.accent)
+                    else -> Icon(Icons.Outlined.DownloadForOffline, t("download"), tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(28.dp))
                 }
             }
         }
-        Spacer(Modifier.width(4.dp))
-        if (c.isGlassy) {
-            Box(
-                modifier = Modifier
-                    .glassyButton(true, size = 42.dp)
-                .gelPressClickable(onClick = onLike),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (liked) c.accent else Color.White, modifier = Modifier.size(28.dp))
-            }
-        } else {
-            IconButton(onClick = onLike, modifier = Modifier.size(42.dp)) {
-                Icon(if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (liked) c.accent else Color.White, modifier = Modifier.size(28.dp))
-            }
+        IconButton(onClick = onLike) {
+            Icon(if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null, tint = if (liked) c.accent else Color.White, modifier = Modifier.size(28.dp))
         }
     }
 }
+
 
 @Composable
 private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onToggleLyrics: () -> Unit) {
@@ -353,122 +256,37 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
         Text(formatMs(state.durationMs), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
     }
     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        if (c.isGlassy) {
-            Box(
-                modifier = Modifier
-                    .glassyButton(true, size = 44.dp)
-                    .gelPressClickable(onClick = { graph.player.toggleShuffle() }),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Default.Shuffle, null, tint = if (state.shuffle) c.accent else Color.White)
-            }
-        } else {
-            IconButton(onClick = { graph.player.toggleShuffle() }, modifier = Modifier.size(42.dp)) {
-                Icon(Icons.Default.Shuffle, null, tint = if (state.shuffle) c.accent else Color.White)
+        IconButton(onClick = { graph.player.toggleShuffle() }) {
+            Icon(Icons.Default.Shuffle, null, tint = if (state.shuffle) c.accent else Color.White)
+        }
+        IconButton(onClick = { graph.player.previous() }, modifier = Modifier.size(56.dp)) {
+            Icon(Icons.Default.SkipPrevious, null, modifier = Modifier.size(40.dp))
+        }
+        Box(
+            Modifier.size(68.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(Color.White),
+            contentAlignment = Alignment.Center,
+        ) {
+            IconButton(onClick = { graph.player.togglePlay() }, modifier = Modifier.fillMaxSize()) {
+                if (state.isBuffering) CircularProgressIndicator(Modifier.size(30.dp), color = Color.Black, strokeWidth = 3.dp)
+                else Icon(if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(40.dp))
             }
         }
-
-        if (c.isGlassy) {
-            Box(
-                modifier = Modifier
-                    .liquidGlassButton(isGlassy = true, size = 56.dp, accent = c.accent)
-                    .gelPressClickable(onClick = { graph.player.previous() }),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Default.SkipPrevious, null, tint = Color.White, modifier = Modifier.size(38.dp))
-            }
-        } else {
-            IconButton(onClick = { graph.player.previous() }, modifier = Modifier.size(56.dp)) {
-                Icon(Icons.Default.SkipPrevious, null, tint = Color.White, modifier = Modifier.size(38.dp))
-            }
+        IconButton(onClick = { graph.player.next() }, enabled = state.hasNext || state.queue.isNotEmpty(), modifier = Modifier.size(56.dp)) {
+            Icon(Icons.Default.SkipNext, null, modifier = Modifier.size(40.dp))
         }
-
-        if (c.isGlassy) {
-            Box(
-                Modifier
-                    .size(76.dp)
-                    .liquidGlass(
-                        isGlassy = true,
-                        shape = CircleShape,
-                        accent = c.accent,
-                        surfaceAlpha = 0.28f,
-                        borderAlpha = 0.70f,
-                        shadowElevation = 14.dp
-                    )
-                    .gelPressClickable(onClick = { graph.player.togglePlay() }),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (state.isBuffering) CircularProgressIndicator(Modifier.size(34.dp), color = Color.White, strokeWidth = 3.dp)
-                else Icon(if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.size(42.dp))
-            }
-        } else {
-            Box(
-                Modifier.size(68.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(Color.White),
-                contentAlignment = Alignment.Center,
-            ) {
-                IconButton(onClick = { graph.player.togglePlay() }, modifier = Modifier.fillMaxSize()) {
-                    if (state.isBuffering) CircularProgressIndicator(Modifier.size(30.dp), color = Color.Black, strokeWidth = 3.dp)
-                    else Icon(if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(40.dp))
-                }
-            }
-        }
-
-        val nextEnabled = state.hasNext || state.queue.isNotEmpty()
-        if (c.isGlassy) {
-            Box(
-                modifier = Modifier
-                    .liquidGlassButton(isGlassy = true, size = 56.dp, accent = c.accent)
-                    .gelPressClickable(enabled = nextEnabled, onClick = { graph.player.next() }),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Default.SkipNext, null, tint = if (nextEnabled) Color.White else Color.White.copy(alpha = 0.38f), modifier = Modifier.size(38.dp))
-            }
-        } else {
-            IconButton(onClick = { graph.player.next() }, enabled = nextEnabled, modifier = Modifier.size(56.dp)) {
-                Icon(Icons.Default.SkipNext, null, tint = if (nextEnabled) Color.White else Color.White.copy(alpha = 0.38f), modifier = Modifier.size(38.dp))
-            }
-        }
-
-        if (c.isGlassy) {
-            Box(
-                modifier = Modifier
-                    .glassyButton(true, size = 44.dp)
-                    .gelPressClickable(onClick = { graph.player.cycleRepeat() }),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    if (state.repeatMode == Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat, null,
-                    tint = if (state.repeatMode != Player.REPEAT_MODE_OFF) c.accent else Color.White,
-                )
-            }
-        } else {
-            IconButton(onClick = { graph.player.cycleRepeat() }, modifier = Modifier.size(42.dp)) {
-                Icon(
-                    if (state.repeatMode == Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat, null,
-                    tint = if (state.repeatMode != Player.REPEAT_MODE_OFF) c.accent else Color.White,
-                )
-            }
+        IconButton(onClick = { graph.player.cycleRepeat() }) {
+            Icon(
+                if (state.repeatMode == Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat, null,
+                tint = if (state.repeatMode != Player.REPEAT_MODE_OFF) c.accent else Color.White,
+            )
         }
     }
-
+    // Previous app: labelled pills (speed, sleep timer, lyrics) between devices and queue
     Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (c.isGlassy) {
-            Box(
-                modifier = Modifier
-                    .glassyButton(true, size = 40.dp)
-                    .gelPressClickable(onClick = { onSheet(PlayerSheet.DEVICES) }),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(if (state.isCasting) Icons.Default.Cast else Icons.Default.Devices, t("connectDevice"),
-                    tint = if (state.isCasting) c.accent else Color.White)
-            }
-        } else {
-            IconButton(onClick = { onSheet(PlayerSheet.DEVICES) }, modifier = Modifier.size(40.dp)) {
-                Icon(if (state.isCasting) Icons.Default.Cast else Icons.Default.Devices, t("connectDevice"),
-                    tint = if (state.isCasting) c.accent else Color.White)
-            }
+        IconButton(onClick = { onSheet(PlayerSheet.DEVICES) }) {
+            Icon(if (state.isCasting) Icons.Default.Cast else Icons.Default.Devices, t("connectDevice"),
+                tint = if (state.isCasting) c.accent else Color.White.copy(alpha = 0.85f))
         }
-
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
             val speed = if (state.speed == 1f) "1x" else "%.2fx".format(state.speed).replace(".00x", "x").replace("0x", "x")
             PlayerPill(speed, null, active = state.speed != 1f) { onSheet(PlayerSheet.EFFECTS) }
@@ -476,62 +294,21 @@ private fun Controls(onSheet: (PlayerSheet) -> Unit, showLyrics: Boolean, onTogg
             PlayerPill(null, Icons.Default.GraphicEq, active = false) { onSheet(PlayerSheet.EFFECTS) }
             PlayerPill(if (showLyrics) t("hideLyrics") else t("lyrics"), null, active = showLyrics, onClick = onToggleLyrics)
         }
-
-        if (c.isGlassy) {
-            Box(
-                modifier = Modifier
-                    .glassyButton(true, size = 40.dp)
-                    .gelPressClickable(onClick = { onSheet(PlayerSheet.QUEUE) }),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.AutoMirrored.Filled.QueueMusic, t("queue"), tint = Color.White)
-            }
-        } else {
-            IconButton(onClick = { onSheet(PlayerSheet.QUEUE) }, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.AutoMirrored.Filled.QueueMusic, t("queue"), tint = Color.White)
-            }
-        }
+        IconButton(onClick = { onSheet(PlayerSheet.QUEUE) }) { Icon(Icons.AutoMirrored.Filled.QueueMusic, t("queue"), tint = Color.White.copy(alpha = 0.85f)) }
     }
 }
 
 @Composable
 private fun PlayerPill(text: String?, icon: androidx.compose.ui.graphics.vector.ImageVector?, active: Boolean, onClick: () -> Unit) {
     val c = LocalSpotifreeColors.current
-    if (c.isGlassy) {
-        Row(
-            Modifier
-                .height(34.dp)
-                .liquidGlass(
-                    isGlassy = true,
-                    shape = CircleShape,
-                    accent = if (active) c.accent else Color.Transparent,
-                    surfaceAlpha = if (active) 0.30f else 0.14f,
-                    borderAlpha = if (active) 0.65f else 0.32f,
-                    blurRadius = 8.dp,
-                    shadowElevation = if (active) 6.dp else 2.dp
-                )
-                .gelPressClickable(onClick = onClick)
-                .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (icon != null) Icon(icon, null, tint = if (active) c.accent else Color.White, modifier = Modifier.size(16.dp))
-            if (text != null) Text(text, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White,
-                maxLines = 1, modifier = Modifier.padding(start = if (icon != null) 4.dp else 0.dp))
-        }
-    } else {
-        val bg = if (active) Color.White.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.1f)
-        Row(
-            Modifier
-                .height(32.dp)
-                .clip(CircleShape)
-                .background(bg)
-                .clickable(onClick = onClick)
-                .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (icon != null) Icon(icon, null, tint = if (active) c.accent else Color.White, modifier = Modifier.size(16.dp))
-            if (text != null) Text(text, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White,
-                maxLines = 1, modifier = Modifier.padding(start = if (icon != null) 4.dp else 0.dp))
-        }
+    Row(
+        Modifier.height(32.dp).clip(CircleShape)
+            .background(if (active) Color.White.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.1f))
+            .clickable(onClick = onClick).padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) Icon(icon, null, tint = if (active) c.accent else Color.White, modifier = Modifier.size(16.dp))
+        if (text != null) Text(text, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White,
+            maxLines = 1, modifier = Modifier.padding(start = if (icon != null) 4.dp else 0.dp))
     }
 }

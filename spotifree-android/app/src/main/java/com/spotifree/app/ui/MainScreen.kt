@@ -13,17 +13,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.res.painterResource
-import com.spotifree.app.R
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -112,11 +102,6 @@ import com.spotifree.app.ui.settings.UpdateDialog
 import com.spotifree.app.ui.stats.RewindScreen
 import com.spotifree.app.ui.stats.StatsScreen
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
-import com.spotifree.app.ui.theme.glassyWaveBackground
-import com.spotifree.app.ui.theme.glass.liquidGlass
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import com.spotifree.app.playback.Network
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -279,13 +264,9 @@ fun MainScreen(activity: MainActivity) {
     val destination = backStack?.destination
 
     CompositionLocalProvider(LocalActions provides actions) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .glassyWaveBackground(c.isGlassy, c.accent, c.background)
-        ) {
+        Box(Modifier.fillMaxSize().background(c.background)) {
             Scaffold(
-                containerColor = if (c.isGlassy) Color.Transparent else c.background,
+                containerColor = c.background,
                 // Screens draw behind the status bar themselves (header gradients); see [Inset]
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 snackbarHost = { SnackbarHost(snackbar) },
@@ -353,95 +334,29 @@ private fun Inset(content: @Composable () -> Unit) {
 @Composable
 private fun BottomBar(tabs: List<Tab>, selected: (Tab) -> Boolean, onSelect: (Tab) -> Unit) {
     val c = LocalSpotifreeColors.current
-    if (c.isGlassy) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 10.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp)
-                    .liquidGlass(
-                        isGlassy = true,
-                        shape = CircleShape,
-                        accent = c.accent,
-                        surfaceAlpha = 0.18f,
-                        borderAlpha = 0.55f,
-                        blurRadius = 24.dp,
-                        shadowElevation = 14.dp
-                    )
-                    .padding(horizontal = 6.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
+    val line = Color.White.copy(alpha = 0.06f)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(if (c.amoled) Color.Black else Color(0xFA121212))
+            .drawBehind { drawLine(line, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }
+            .navigationBarsPadding()
+            .height(60.dp),
+    ) {
+        tabs.forEach { tab ->
+            val active = selected(tab)
+            val tint = if (active) Color.White else c.textSecondary
+            Column(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onSelect(tab) },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
-                tabs.forEach { tab ->
-                    val active = selected(tab)
-                    val tint = if (active) Color.White else Color.White.copy(alpha = 0.70f)
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clip(CircleShape)
-                            .then(
-                                if (active) {
-                                    Modifier
-                                        .background(
-                                            Brush.verticalGradient(
-                                                listOf(
-                                                    c.accent.copy(alpha = 0.40f),
-                                                    c.accent.copy(alpha = 0.20f)
-                                                )
-                                            )
-                                        )
-                                        .border(
-                                            1.dp,
-                                            Brush.verticalGradient(
-                                                listOf(Color.White.copy(alpha = 0.60f), Color.White.copy(alpha = 0.15f))
-                                            ),
-                                            CircleShape
-                                        )
-                                } else Modifier
-                            )
-                            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onSelect(tab) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                            Icon(if (active) tab.selectedIcon else tab.icon, tab.label, tint = tint, modifier = Modifier.size(22.dp))
-                            Spacer(Modifier.height(2.dp))
-                            Text(tab.label, color = tint, fontSize = 10.sp, fontWeight = if (active) FontWeight.ExtraBold else FontWeight.Medium, maxLines = 1)
-                        }
-                    }
-                }
-            }
-        }
-    } else {
-        val line = Color.White.copy(alpha = 0.06f)
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .background(if (c.amoled) Color.Black else Color(0xFA121212))
-                .drawBehind { drawLine(line, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }
-                .navigationBarsPadding()
-                .height(60.dp),
-        ) {
-            tabs.forEach { tab ->
-                val active = selected(tab)
-                val tint = if (active) Color.White else c.textSecondary
-                Column(
-                    Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onSelect(tab) },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Icon(if (active) tab.selectedIcon else tab.icon, tab.label, tint = tint, modifier = Modifier.size(24.dp))
-                    Spacer(Modifier.height(3.dp))
-                    Text(tab.label, color = tint, fontSize = 11.sp, fontWeight = if (active) FontWeight.ExtraBold else FontWeight.Medium, maxLines = 1)
-                }
+                Icon(if (active) tab.selectedIcon else tab.icon, tab.label, tint = tint, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.height(3.dp))
+                Text(tab.label, color = tint, fontSize = 11.sp, fontWeight = if (active) FontWeight.ExtraBold else FontWeight.Medium, maxLines = 1)
             }
         }
     }

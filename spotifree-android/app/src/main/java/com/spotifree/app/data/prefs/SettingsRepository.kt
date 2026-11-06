@@ -24,7 +24,6 @@ import kotlinx.serialization.json.Json
 data class AppSettings(
     val language: String = "es",
     // Appearance
-    val uiTheme: String = "default", // default | glassy
     val accentColor: String = "#2979ff",
     val amoledTheme: Boolean = false,
     // Playback

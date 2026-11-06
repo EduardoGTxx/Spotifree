@@ -72,7 +72,6 @@ import com.spotifree.app.ui.common.UiMessage
 import com.spotifree.app.ui.i18n.LocalStrings
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
-import com.spotifree.app.ui.theme.glassyButton
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -197,12 +196,12 @@ fun PlaylistScreen(id: String, onBack: () -> Unit) {
                 )
                 PlayRow(onPlay = { actions.play(shown, 0) }, onShuffle = { actions.play(shown, 0, shuffle = true) }, enabled = shown.isNotEmpty()) {
                     if (!isDownloads && !isDevice) {
-                        IconButton(onClick = { if (!allDownloaded) actions.downloadAll(all) }, modifier = Modifier.glassyButton(c.isGlassy, size = 40.dp)) {
+                        IconButton(onClick = { if (!allDownloaded) actions.downloadAll(all) }) {
                             Icon(if (allDownloaded) Icons.Default.DownloadDone else Icons.Default.Download, t("downloadAll"), tint = if (allDownloaded) c.accent else c.textSecondary)
                         }
                     }
                     if (isUser) {
-                        IconButton(onClick = { scope.launch { graph.library.toggleLikeAll(id) } }, modifier = Modifier.glassyButton(c.isGlassy, size = 40.dp)) {
+                        IconButton(onClick = { scope.launch { graph.library.toggleLikeAll(id) } }) {
                             Icon(if (allLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, t("likeAll"), tint = if (allLiked) c.accent else c.textSecondary)
                         }
                     }
@@ -245,7 +244,7 @@ fun PlaylistScreen(id: String, onBack: () -> Unit) {
                 item {
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = Color.White.copy(alpha = 0.08f))
                     SectionTitle(t("recommendedSongs"), icon = Icons.Default.AutoAwesome, action = {
-                        IconButton(onClick = { reloadSuggestions++ }, modifier = Modifier.glassyButton(c.isGlassy, size = 36.dp)) { Icon(Icons.Default.Refresh, t("refresh"), tint = c.textSecondary) }
+                        IconButton(onClick = { reloadSuggestions++ }) { Icon(Icons.Default.Refresh, t("refresh"), tint = c.textSecondary) }
                     })
                 }
                 items(suggestions, key = { "s-" + it.id }) { tr ->
@@ -264,7 +263,7 @@ fun PlaylistScreen(id: String, onBack: () -> Unit) {
         }
         CollapsingTopBar(title, headerColor, listState, onBack) {
             IconButton(onClick = { showFilter = !showFilter; if (!showFilter) query = "" }) { Icon(Icons.Default.Search, null) }
-            IconButton(onClick = { menu = true }, modifier = Modifier.glassyButton(c.isGlassy, size = 36.dp)) { Icon(Icons.Default.MoreVert, null) }
+            IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, null) }
         }
     }
 

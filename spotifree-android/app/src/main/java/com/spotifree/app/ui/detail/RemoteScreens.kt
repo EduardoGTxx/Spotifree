@@ -77,8 +77,6 @@ import com.spotifree.app.ui.common.TrackRow
 import com.spotifree.app.ui.i18n.LocalStrings
 import com.spotifree.app.ui.i18n.t
 import com.spotifree.app.ui.theme.LocalSpotifreeColors
-import com.spotifree.app.ui.theme.glassyButton
-import com.spotifree.app.ui.theme.glassyCard
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -159,8 +157,8 @@ fun CollectionScreen(url: String, initialTitle: String, onBack: () -> Unit) {
                                 Icon(if (saved != null) Icons.Default.LibraryAddCheck else Icons.Default.LibraryAdd, t("saveToLibrary"),
                                     tint = if (saved != null) c.accent else c.textSecondary)
                             }
-                            IconButton(onClick = { actions.downloadAll(p.tracks) }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.Download, t("downloadAll"), tint = c.textSecondary) }
-                            IconButton(onClick = { actions.showAddToPlaylist(p.tracks) }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.MoreVert, null, tint = c.textSecondary) }
+                            IconButton(onClick = { actions.downloadAll(p.tracks) }) { Icon(Icons.Default.Download, t("downloadAll"), tint = c.textSecondary) }
+                            IconButton(onClick = { actions.showAddToPlaylist(p.tracks) }) { Icon(Icons.Default.MoreVert, null, tint = c.textSecondary) }
                         }
                         if (showFilter) FilterField(query) { query = it }
                     }
@@ -173,7 +171,7 @@ fun CollectionScreen(url: String, initialTitle: String, onBack: () -> Unit) {
             }
         }
         CollapsingTopBar(page?.title ?: initialTitle, headerColor, listState, onBack) {
-            IconButton(onClick = { showFilter = !showFilter; if (!showFilter) query = "" }, modifier = Modifier.glassyButton(c.isGlassy, size = 38.dp)) { Icon(Icons.Default.Search, null) }
+            IconButton(onClick = { showFilter = !showFilter; if (!showFilter) query = "" }) { Icon(Icons.Default.Search, null) }
         }
     }
 }
@@ -242,7 +240,7 @@ fun ArtistScreen(nameOrUrl: String, onBack: () -> Unit) {
                                 }
                             }
                             Spacer(Modifier.weight(1f))
-                            IconButton(onClick = { actions.play(top, 0, true) }, enabled = top.isNotEmpty(), modifier = Modifier.glassyButton(c.isGlassy, size = 42.dp)) {
+                            IconButton(onClick = { actions.play(top, 0, true) }, enabled = top.isNotEmpty()) {
                                 Icon(Icons.Default.Shuffle, t("shuffle"), tint = c.textSecondary)
                             }
                         }
@@ -252,7 +250,7 @@ fun ArtistScreen(nameOrUrl: String, onBack: () -> Unit) {
                         TrackRow(tr, onClick = { actions.play(top, i) }, isCurrent = player.current?.id == tr.id, index = i + 1,
                             onMore = { actions.showMenu(tr, MenuContext()) },
                             trailing = {
-                                IconButton(onClick = { actions.toggleLike(tr) }, modifier = Modifier.glassyButton(c.isGlassy, size = 34.dp)) {
+                                IconButton(onClick = { actions.toggleLike(tr) }) {
                                     val isLiked = tr.id in liked
                                     Icon(if (isLiked) Icons.Default.Favorite else Icons.Default.FavoriteBorder, null,
                                         tint = if (isLiked) c.accent else c.textSecondary, modifier = Modifier.size(22.dp))
@@ -273,7 +271,7 @@ fun ArtistScreen(nameOrUrl: String, onBack: () -> Unit) {
                         item {
                             SectionTitle(t("about"))
                             Text(d, color = c.textSecondary, style = MaterialTheme.typography.bodyMedium, maxLines = 8, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(16.dp).glassyCard(c.isGlassy, RoundedCornerShape(12.dp)).background(if (c.isGlassy) Color.Transparent else c.surface).padding(16.dp))
+                                modifier = Modifier.padding(16.dp).clip(RoundedCornerShape(12.dp)).background(c.surface).padding(16.dp))
                         }
                     }
                 }

@@ -26,7 +26,7 @@ fun SpotifreeRoot(activity: MainActivity) {
     var migrating by remember { mutableStateOf(migration.isNeeded()) }
 
     CompositionLocalProvider(LocalGraph provides graph, LocalStrings provides strings) {
-        SpotifreeTheme(accentHex = settings.accentColor, amoled = settings.amoledTheme, uiTheme = settings.uiTheme) {
+        SpotifreeTheme(accentHex = settings.accentColor, amoled = settings.amoledTheme) {
             if (migrating) {
                 MigrationScreen(migration, onDone = { migrating = false })
             } else {
