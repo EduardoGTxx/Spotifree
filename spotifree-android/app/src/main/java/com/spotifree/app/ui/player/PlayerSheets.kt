@@ -127,7 +127,7 @@ fun QueueSheet(onDismiss: () -> Unit) {
         sheetState = sheet,
         shape = RoundedCornerShape(topStart = if (c.isGlassy) 28.dp else 16.dp, topEnd = if (c.isGlassy) 28.dp else 16.dp),
         dragHandle = { GlassDragHandle() },
-        containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0xF0121626) else c.elevated,
+        containerColor = if (c.isGlassy) androidx.compose.ui.graphics.Color(0x2AFFFFFF) else c.elevated,
         contentColor = androidx.compose.ui.graphics.Color.White
     ) {
         Column(Modifier.navigationBarsPadding()) {
@@ -230,7 +230,7 @@ fun SleepTimerSheet(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(topStart = if (c.isGlassy) 28.dp else 16.dp, topEnd = if (c.isGlassy) 28.dp else 16.dp),
         dragHandle = { GlassDragHandle() },
-        containerColor = if (c.isGlassy) Color(0xF0121626) else c.elevated,
+        containerColor = if (c.isGlassy) Color(0x2AFFFFFF) else c.elevated,
         contentColor = Color.White
     ) {
         Column(Modifier.navigationBarsPadding()) {
@@ -273,7 +273,7 @@ fun EffectsSheet(onDismiss: () -> Unit) {
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         shape = RoundedCornerShape(topStart = if (c.isGlassy) 28.dp else 16.dp, topEnd = if (c.isGlassy) 28.dp else 16.dp),
         dragHandle = { GlassDragHandle() },
-        containerColor = if (c.isGlassy) Color(0xF0121626) else c.elevated,
+        containerColor = if (c.isGlassy) Color(0x2AFFFFFF) else c.elevated,
         contentColor = Color.White
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 20.dp)) {
@@ -366,7 +366,7 @@ fun DevicesSheet(onDismiss: () -> Unit) {
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         shape = RoundedCornerShape(topStart = if (c.isGlassy) 28.dp else 16.dp, topEnd = if (c.isGlassy) 28.dp else 16.dp),
         dragHandle = { GlassDragHandle() },
-        containerColor = if (c.isGlassy) Color(0xF0121626) else c.elevated,
+        containerColor = if (c.isGlassy) Color(0x2AFFFFFF) else c.elevated,
         contentColor = Color.White
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 20.dp)) {

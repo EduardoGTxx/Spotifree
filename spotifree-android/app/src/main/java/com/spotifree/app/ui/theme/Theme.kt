@@ -257,13 +257,15 @@ fun Modifier.glassyCard(
     alpha: Float = 0.14f,
     borderAlpha: Float = 0.38f,
     shadowElevation: Dp = 6.dp,
+    interactive: Boolean = false,
 ): Modifier = this.liquidGlassCard(
     isGlassy = isGlassy,
     shape = shape,
     accent = accent,
     surfaceAlpha = alpha,
     borderAlpha = borderAlpha,
-    shadowElevation = shadowElevation
+    shadowElevation = shadowElevation,
+    interactive = interactive,
 )
 
 /** Glassy circular button modifier: delegates to Apple Liquid Glass button with tactile gel-press physics. */

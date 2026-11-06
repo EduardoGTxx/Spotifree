@@ -244,8 +244,20 @@ fun HomeScreen(
                             Modifier
                                 .padding(horizontal = 16.dp, vertical = 6.dp)
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(c.elevated)
+                                .then(
+                                    if (c.isGlassy) {
+                                        Modifier.glassyCard(
+                                            isGlassy = true,
+                                            shape = RoundedCornerShape(12.dp),
+                                            accent = c.accent,
+                                            interactive = true
+                                        )
+                                    } else {
+                                        Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(c.elevated)
+                                    }
+                                )
                                 .clickable { onUpdateClick(u) }
                                 .padding(horizontal = 14.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
