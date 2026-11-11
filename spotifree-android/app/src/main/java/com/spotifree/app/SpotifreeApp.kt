@@ -20,6 +20,7 @@ class SpotifreeApp : Application(), SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
+        com.spotifree.app.core.SpotifreeCoreManager.initialize(this)
         graph = AppGraph.get(this)
         createChannels()
         AutoBackupWorker.schedule(this, graph.settings.current.autoBackupFrequency)

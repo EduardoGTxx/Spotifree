@@ -82,6 +82,17 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: Rust Toolchain & Android Targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android
+
+      - name: Compilar y Testear Rust Core
+        run: |
+          cd spotifree-core
+          cargo test
+          cargo build -p spotifree-core-ffi
+
       - name: Gradle
         uses: gradle/actions/setup-gradle@v4
 
