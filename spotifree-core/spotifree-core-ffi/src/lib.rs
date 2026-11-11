@@ -1,5 +1,7 @@
 pub mod error;
 
+use std::sync::Arc;
+
 pub use error::SpotifreeError;
 pub use spotifree_core_network::NativeStreamInfo;
 
@@ -25,6 +27,37 @@ pub async fn resolve_stream_url(video_id: String) -> Result<NativeStreamInfo, Sp
     spotifree_core_network::resolve_stream(&video_id)
         .await
         .map_err(|e| SpotifreeError::Network { reason: e })
+}
+
+#[derive(uniffi::Object)]
+pub struct AudioCacheBridge {
+    inner: spotifree_core_storage::NativeAudioCache,
+}
+
+#[uniffi::export]
+impl AudioCacheBridge {
+    #[uniffi::constructor]
+    pub fn new(cache_dir: String, max_bytes: i64) -> Result<Arc<Self>, SpotifreeError> {
+        let cache = spotifree_core_storage::NativeAudioCache::new(cache_dir, max_bytes)
+            .map_err(|e| SpotifreeError::Storage { reason: e })?;
+        Ok(Arc::new(Self { inner: cache }))
+    }
+
+    pub fn write_chunk(&self, key: String, offset: i64, data: Vec<u8>) -> Result<(), SpotifreeError> {
+        self.inner
+            .write_chunk(&key, offset.max(0) as u64, &data)
+            .map_err(|e| SpotifreeError::Storage { reason: e })
+    }
+
+    pub fn read_range(&self, key: String, offset: i64, length: i32) -> Result<Option<Vec<u8>>, SpotifreeError> {
+        self.inner
+            .read_range(&key, offset.max(0) as u64, length.max(0) as usize)
+            .map_err(|e| SpotifreeError::Storage { reason: e })
+    }
+
+    pub fn is_cached(&self, key: String) -> bool {
+        self.inner.is_cached(&key)
+    }
 }
 
 #[cfg(test)]

@@ -11,6 +11,7 @@ import androidx.media3.datasource.TransferListener
 class SwitchingDataSource(
     private val network: DataSource,
     private val direct: DataSource,
+    private val nativeCache: uniffi.spotifree_core_ffi.AudioCacheBridge? = null,
 ) : DataSource {
     private var current: DataSource? = null
 
