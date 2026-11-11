@@ -82,6 +82,13 @@ class Recognizer(
         if (provider == "acrcloud") acr(file, apiKey) else audd(file, apiKey)
     }
 
+    /** Generates acoustic peak fingerprint hashes using the Rust core DSP engine. */
+    fun computeFingerprint(pcm: ByteArray, sampleRate: Int = 44100): List<String> {
+        return runCatching {
+            uniffi.spotifree_core_ffi.generateAudioFingerprint(pcm, sampleRate)
+        }.getOrDefault(emptyList())
+    }
+
     companion object {
         internal fun useContextMediaRecorder(sdkInt: Int): Boolean = sdkInt >= android.os.Build.VERSION_CODES.S
     }

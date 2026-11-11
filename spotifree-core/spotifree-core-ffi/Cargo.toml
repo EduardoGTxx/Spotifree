@@ -22,3 +22,4 @@ serde_json = { workspace = true }
 spotifree-core-network = { path = "../spotifree-core-network" }
 spotifree-core-storage = { path = "../spotifree-core-storage" }
 spotifree-core-audio = { path = "../spotifree-core-audio" }
+spotifree-core-lyrics = { path = "../spotifree-core-lyrics" }

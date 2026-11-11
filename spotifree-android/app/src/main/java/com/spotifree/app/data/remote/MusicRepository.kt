@@ -109,18 +109,32 @@ class MusicRepository(private val http: OkHttpClient = OkHttpClient()) {
         val nTitle = normalize(title)
         val nArtist = normalize(artist.split(Regex(""",|&| x | feat\.? """, RegexOption.IGNORE_CASE)).first())
         return candidates.maxByOrNull { c ->
-            var score = 0
+            val nativeScore = runCatching {
+                uniffi.spotifree_core_ffi.fuzzyMatchTrack(
+                    targetArtist = artist,
+                    targetTitle = title,
+                    targetDurationSec = durationSec,
+                    candArtist = c.artist,
+                    candTitle = c.title,
+                    candDurationSec = c.durationSec,
+                )
+            }.getOrNull()
+            if (nativeScore != null) {
+                return@maxByOrNull nativeScore
+            }
+
+            var score = 0f
             val ct = normalize(c.title)
             val ca = normalize(c.artist)
-            if (ct == nTitle) score += 6 else if (nTitle.isNotEmpty() && (ct.contains(nTitle) || nTitle.contains(ct))) score += 3
-            if (ca == nArtist) score += 4 else if (nArtist.isNotEmpty() && (ca.contains(nArtist) || nArtist.contains(ca))) score += 2
+            if (ct == nTitle) score += 6f else if (nTitle.isNotEmpty() && (ct.contains(nTitle) || nTitle.contains(ct))) score += 3f
+            if (ca == nArtist) score += 4f else if (nArtist.isNotEmpty() && (ca.contains(nArtist) || nArtist.contains(ca))) score += 2f
             if (durationSec > 0 && c.durationSec > 0) {
                 val diff = kotlin.math.abs(c.durationSec - durationSec)
                 score += when {
-                    diff <= 3 -> 4
-                    diff <= 10 -> 2
-                    diff > 40 -> -4
-                    else -> 0
+                    diff <= 3 -> 4f
+                    diff <= 10 -> 2f
+                    diff > 40 -> -4f
+                    else -> 0f
                 }
             }
             score

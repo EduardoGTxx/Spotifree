@@ -5,6 +5,7 @@ members = [
     "spotifree-core-network",
     "spotifree-core-storage",
     "spotifree-core-audio",
+    "spotifree-core-lyrics",
 ]
 
 [workspace.package]

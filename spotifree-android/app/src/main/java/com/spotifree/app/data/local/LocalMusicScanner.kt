@@ -38,17 +38,34 @@ class LocalMusicScanner(private val context: Context, private val db: AppDatabas
             val albumCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
             val albumIdCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
             val durCol = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+            val dataCol = c.getColumnIndex(MediaStore.Audio.Media.DATA)
             while (c.moveToNext()) {
                 val id = c.getLong(idCol)
                 val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
                 val art = ContentUris.withAppendedId(android.net.Uri.parse("content://media/external/audio/albumart"), c.getLong(albumIdCol))
-                val artist = c.getString(artistCol)?.takeUnless { it == "<unknown>" } ?: ""
+                var artist = c.getString(artistCol)?.takeUnless { it == "<unknown>" } ?: ""
+                var title = c.getString(titleCol) ?: "?"
+                var album = c.getString(albumCol) ?: ""
+                var durSec = (c.getLong(durCol) / 1000).toInt()
+                val filePath = if (dataCol >= 0) c.getString(dataCol) else null
+
+                if ((artist.isEmpty() || title == "?" || title.isEmpty()) && !filePath.isNullOrBlank()) {
+                    runCatching {
+                        uniffi.spotifree_core_ffi.readAudioTags(filePath)
+                    }.getOrNull()?.let { tags ->
+                        if ((title == "?" || title.isEmpty()) && tags.title.isNotEmpty()) title = tags.title
+                        if (artist.isEmpty() && tags.artist.isNotEmpty()) artist = tags.artist
+                        if (album.isEmpty() && tags.album.isNotEmpty()) album = tags.album
+                        if (durSec <= 0 && tags.durationSec > 0) durSec = tags.durationSec
+                    }
+                }
+
                 out += Track(
                     id = "local-$id",
-                    title = c.getString(titleCol) ?: "?",
+                    title = title,
                     artist = artist,
-                    album = c.getString(albumCol) ?: "",
-                    durationSec = (c.getLong(durCol) / 1000).toInt(),
+                    album = album,
+                    durationSec = durSec,
                     coverUrl = art.toString(),
                     localUri = uri.toString(),
                 )

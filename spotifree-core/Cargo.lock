@@ -1202,11 +1202,20 @@ dependencies = [
  "serde",
  "serde_json",
  "spotifree-core-audio",
+ "spotifree-core-lyrics",
  "spotifree-core-network",
  "spotifree-core-storage",
  "thiserror 2.0.21",
  "tokio",
  "uniffi",
+]
+
+[[package]]
+name = "spotifree-core-lyrics"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

@@ -84,7 +84,13 @@ class AudioEffects {
         applyReverb(settings.effectPreset)
         runCatchingCancellable {
             loudness?.let {
-                it.setTargetGain(if (settings.volumeNormalization) 300 else 0)
+                val targetGainMb = if (settings.volumeNormalization) {
+                    val gainDb = runCatching {
+                        uniffi.spotifree_core_ffi.calculateGainAdjustment(-14f, -17f)
+                    }.getOrDefault(3f)
+                    (gainDb * 100).roundToInt().coerceIn(0, 1000)
+                } else 0
+                it.setTargetGain(targetGainMb)
                 it.enabled = settings.volumeNormalization
             }
         }

@@ -60,6 +60,11 @@ object Romanizer {
 
     fun romanize(text: String?): String? {
         if (text.isNullOrEmpty() || !SUPPORTED.containsMatchIn(text)) return null
+        try {
+            return uniffi.spotifree_core_ffi.romanizeText(text)
+        } catch (_: Throwable) {
+            // Fallback to JVM implementation below if native library is unavailable
+        }
         val src = Normalizer.normalize(
             Normalizer.normalize(text, Normalizer.Form.NFD).replace(Regex("[\\u0300-\\u036f]"), ""),
             Normalizer.Form.NFC,

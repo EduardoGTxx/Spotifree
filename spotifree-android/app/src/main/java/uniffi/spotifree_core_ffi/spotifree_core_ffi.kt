@@ -750,6 +750,22 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -795,8 +811,24 @@ internal interface UniffiLib : Library {
     ): Unit
     fun uniffi_spotifree_core_ffi_fn_method_audioprocessorbridge_set_reverb_room_size(`ptr`: Pointer,`size`: Float,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_spotifree_core_ffi_fn_func_calculate_gain_adjustment(`targetLufs`: Float,`currentLufs`: Float,uniffi_out_err: UniffiRustCallStatus, 
+    ): Float
+    fun uniffi_spotifree_core_ffi_fn_func_calculate_loudness_lufs(`pcm`: RustBuffer.ByValue,`sampleRate`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): Float
+    fun uniffi_spotifree_core_ffi_fn_func_calculate_true_peak(`pcm`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Float
+    fun uniffi_spotifree_core_ffi_fn_func_fuzzy_match_track(`targetArtist`: RustBuffer.ByValue,`targetTitle`: RustBuffer.ByValue,`targetDurationSec`: Int,`candArtist`: RustBuffer.ByValue,`candTitle`: RustBuffer.ByValue,`candDurationSec`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): Float
+    fun uniffi_spotifree_core_ffi_fn_func_generate_audio_fingerprint(`pcm`: RustBuffer.ByValue,`sampleRate`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_spotifree_core_ffi_fn_func_parse_lrc_lyrics(`lrcContent`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_spotifree_core_ffi_fn_func_read_audio_tags(`filePath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_spotifree_core_ffi_fn_func_resolve_stream_url(`videoId`: RustBuffer.ByValue,
     ): Long
+    fun uniffi_spotifree_core_ffi_fn_func_romanize_text(`text`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_spotifree_core_ffi_fn_func_spotifree_core_ping(`payload`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_spotifree_core_ffi_fn_func_spotifree_core_version(uniffi_out_err: UniffiRustCallStatus, 
@@ -913,7 +945,23 @@ internal interface UniffiLib : Library {
     ): Unit
     fun ffi_spotifree_core_ffi_rust_future_complete_void(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_spotifree_core_ffi_checksum_func_calculate_gain_adjustment(
+    ): Short
+    fun uniffi_spotifree_core_ffi_checksum_func_calculate_loudness_lufs(
+    ): Short
+    fun uniffi_spotifree_core_ffi_checksum_func_calculate_true_peak(
+    ): Short
+    fun uniffi_spotifree_core_ffi_checksum_func_fuzzy_match_track(
+    ): Short
+    fun uniffi_spotifree_core_ffi_checksum_func_generate_audio_fingerprint(
+    ): Short
+    fun uniffi_spotifree_core_ffi_checksum_func_parse_lrc_lyrics(
+    ): Short
+    fun uniffi_spotifree_core_ffi_checksum_func_read_audio_tags(
+    ): Short
     fun uniffi_spotifree_core_ffi_checksum_func_resolve_stream_url(
+    ): Short
+    fun uniffi_spotifree_core_ffi_checksum_func_romanize_text(
     ): Short
     fun uniffi_spotifree_core_ffi_checksum_func_spotifree_core_ping(
     ): Short
@@ -954,7 +1002,31 @@ private fun uniffiCheckContractApiVersion(lib: UniffiLib) {
 
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: UniffiLib) {
+    if (lib.uniffi_spotifree_core_ffi_checksum_func_calculate_gain_adjustment() != 5392.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_spotifree_core_ffi_checksum_func_calculate_loudness_lufs() != 53539.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_spotifree_core_ffi_checksum_func_calculate_true_peak() != 64063.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_spotifree_core_ffi_checksum_func_fuzzy_match_track() != 7755.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_spotifree_core_ffi_checksum_func_generate_audio_fingerprint() != 26099.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_spotifree_core_ffi_checksum_func_parse_lrc_lyrics() != 12503.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_spotifree_core_ffi_checksum_func_read_audio_tags() != 12178.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_spotifree_core_ffi_checksum_func_resolve_stream_url() != 8925.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_spotifree_core_ffi_checksum_func_romanize_text() != 43521.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_spotifree_core_ffi_checksum_func_spotifree_core_ping() != 20543.toShort()) {
@@ -1143,6 +1215,29 @@ public object FfiConverterFloat: FfiConverter<Float, Float> {
 
     override fun write(value: Float, buf: ByteBuffer) {
         buf.putFloat(value)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterDouble: FfiConverter<Double, Double> {
+    override fun lift(value: Double): Double {
+        return value
+    }
+
+    override fun read(buf: ByteBuffer): Double {
+        return buf.getDouble()
+    }
+
+    override fun lower(value: Double): Double {
+        return value
+    }
+
+    override fun allocationSize(value: Double) = 8UL
+
+    override fun write(value: Double, buf: ByteBuffer) {
+        buf.putDouble(value)
     }
 }
 
@@ -1862,6 +1957,86 @@ public object FfiConverterTypeAudioProcessorBridge: FfiConverter<AudioProcessorB
 
 
 
+data class NativeLrcLine (
+    var `timeSec`: kotlin.Double, 
+    var `text`: kotlin.String, 
+    var `isInstrumental`: kotlin.Boolean
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeNativeLrcLine: FfiConverterRustBuffer<NativeLrcLine> {
+    override fun read(buf: ByteBuffer): NativeLrcLine {
+        return NativeLrcLine(
+            FfiConverterDouble.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: NativeLrcLine) = (
+            FfiConverterDouble.allocationSize(value.`timeSec`) +
+            FfiConverterString.allocationSize(value.`text`) +
+            FfiConverterBoolean.allocationSize(value.`isInstrumental`)
+    )
+
+    override fun write(value: NativeLrcLine, buf: ByteBuffer) {
+            FfiConverterDouble.write(value.`timeSec`, buf)
+            FfiConverterString.write(value.`text`, buf)
+            FfiConverterBoolean.write(value.`isInstrumental`, buf)
+    }
+}
+
+
+
+data class NativeTagInfo (
+    var `title`: kotlin.String, 
+    var `artist`: kotlin.String, 
+    var `album`: kotlin.String, 
+    var `year`: kotlin.String, 
+    var `durationSec`: kotlin.Int
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeNativeTagInfo: FfiConverterRustBuffer<NativeTagInfo> {
+    override fun read(buf: ByteBuffer): NativeTagInfo {
+        return NativeTagInfo(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: NativeTagInfo) = (
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`artist`) +
+            FfiConverterString.allocationSize(value.`album`) +
+            FfiConverterString.allocationSize(value.`year`) +
+            FfiConverterInt.allocationSize(value.`durationSec`)
+    )
+
+    override fun write(value: NativeTagInfo, buf: ByteBuffer) {
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`artist`, buf)
+            FfiConverterString.write(value.`album`, buf)
+            FfiConverterString.write(value.`year`, buf)
+            FfiConverterInt.write(value.`durationSec`, buf)
+    }
+}
+
+
+
 
 
 sealed class SpotifreeException: kotlin.Exception() {
@@ -1988,6 +2163,38 @@ public object FfiConverterTypeSpotifreeError : FfiConverterRustBuffer<SpotifreeE
 /**
  * @suppress
  */
+public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?> {
+    override fun read(buf: ByteBuffer): kotlin.String? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterString.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.String?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterString.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.String?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterString.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalByteArray: FfiConverterRustBuffer<kotlin.ByteArray?> {
     override fun read(buf: ByteBuffer): kotlin.ByteArray? {
         if (buf.get().toInt() == 0) {
@@ -2017,6 +2224,58 @@ public object FfiConverterOptionalByteArray: FfiConverterRustBuffer<kotlin.ByteA
 
 
 
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.String>> {
+    override fun read(buf: ByteBuffer): List<kotlin.String> {
+        val len = buf.getInt()
+        return List<kotlin.String>(len) {
+            FfiConverterString.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.String>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterString.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.String>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterString.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeNativeLrcLine: FfiConverterRustBuffer<List<NativeLrcLine>> {
+    override fun read(buf: ByteBuffer): List<NativeLrcLine> {
+        val len = buf.getInt()
+        return List<NativeLrcLine>(len) {
+            FfiConverterTypeNativeLrcLine.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<NativeLrcLine>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeNativeLrcLine.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<NativeLrcLine>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeNativeLrcLine.write(it, buf)
+        }
+    }
+}
 
 
 
@@ -2024,6 +2283,74 @@ public object FfiConverterOptionalByteArray: FfiConverterRustBuffer<kotlin.ByteA
 
 
 
+
+
+
+
+ fun `calculateGainAdjustment`(`targetLufs`: kotlin.Float, `currentLufs`: kotlin.Float): kotlin.Float {
+            return FfiConverterFloat.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_spotifree_core_ffi_fn_func_calculate_gain_adjustment(
+        FfiConverterFloat.lower(`targetLufs`),FfiConverterFloat.lower(`currentLufs`),_status)
+}
+    )
+    }
+    
+ fun `calculateLoudnessLufs`(`pcm`: kotlin.ByteArray, `sampleRate`: kotlin.Int): kotlin.Float {
+            return FfiConverterFloat.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_spotifree_core_ffi_fn_func_calculate_loudness_lufs(
+        FfiConverterByteArray.lower(`pcm`),FfiConverterInt.lower(`sampleRate`),_status)
+}
+    )
+    }
+    
+ fun `calculateTruePeak`(`pcm`: kotlin.ByteArray): kotlin.Float {
+            return FfiConverterFloat.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_spotifree_core_ffi_fn_func_calculate_true_peak(
+        FfiConverterByteArray.lower(`pcm`),_status)
+}
+    )
+    }
+    
+ fun `fuzzyMatchTrack`(`targetArtist`: kotlin.String, `targetTitle`: kotlin.String, `targetDurationSec`: kotlin.Int, `candArtist`: kotlin.String, `candTitle`: kotlin.String, `candDurationSec`: kotlin.Int): kotlin.Float {
+            return FfiConverterFloat.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_spotifree_core_ffi_fn_func_fuzzy_match_track(
+        FfiConverterString.lower(`targetArtist`),FfiConverterString.lower(`targetTitle`),FfiConverterInt.lower(`targetDurationSec`),FfiConverterString.lower(`candArtist`),FfiConverterString.lower(`candTitle`),FfiConverterInt.lower(`candDurationSec`),_status)
+}
+    )
+    }
+    
+ fun `generateAudioFingerprint`(`pcm`: kotlin.ByteArray, `sampleRate`: kotlin.Int): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_spotifree_core_ffi_fn_func_generate_audio_fingerprint(
+        FfiConverterByteArray.lower(`pcm`),FfiConverterInt.lower(`sampleRate`),_status)
+}
+    )
+    }
+    
+ fun `parseLrcLyrics`(`lrcContent`: kotlin.String): List<NativeLrcLine> {
+            return FfiConverterSequenceTypeNativeLrcLine.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_spotifree_core_ffi_fn_func_parse_lrc_lyrics(
+        FfiConverterString.lower(`lrcContent`),_status)
+}
+    )
+    }
+    
+
+    @Throws(SpotifreeException::class) fun `readAudioTags`(`filePath`: kotlin.String): NativeTagInfo {
+            return FfiConverterTypeNativeTagInfo.lift(
+    uniffiRustCallWithError(SpotifreeException) { _status ->
+    UniffiLib.INSTANCE.uniffi_spotifree_core_ffi_fn_func_read_audio_tags(
+        FfiConverterString.lower(`filePath`),_status)
+}
+    )
+    }
+    
 
     @Throws(SpotifreeException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
@@ -2039,6 +2366,15 @@ public object FfiConverterOptionalByteArray: FfiConverterRustBuffer<kotlin.ByteA
         SpotifreeException.ErrorHandler,
     )
     }
+ fun `romanizeText`(`text`: kotlin.String): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_spotifree_core_ffi_fn_func_romanize_text(
+        FfiConverterString.lower(`text`),_status)
+}
+    )
+    }
+    
 
     @Throws(SpotifreeException::class) fun `spotifreeCorePing`(`payload`: kotlin.String): kotlin.String {
             return FfiConverterString.lift(
