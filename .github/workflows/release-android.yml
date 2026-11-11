@@ -92,6 +92,18 @@ jobs:
           cd spotifree-core
           cargo test
           cargo build -p spotifree-core-ffi
+          if [ -n "$ANDROID_NDK_LATEST_HOME" ] || [ -n "$ANDROID_NDK_HOME" ] || [ -d "$ANDROID_HOME/ndk" ]; then
+            NDK_PATH="${ANDROID_NDK_LATEST_HOME:-${ANDROID_NDK_HOME}}"
+            if [ -z "$NDK_PATH" ]; then
+              NDK_PATH=$(ls -d "$ANDROID_HOME/ndk/"* 2>/dev/null | sort -V | tail -n 1)
+            fi
+            if [ -n "$NDK_PATH" ]; then
+              echo "Using Android NDK: $NDK_PATH"
+              cargo install cargo-ndk || true
+              export ANDROID_NDK_HOME="$NDK_PATH"
+              cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -o ../spotifree-android/app/src/main/jniLibs build --release -p spotifree-core-ffi || true
+            fi
+          fi
 
       - name: Gradle
         uses: gradle/actions/setup-gradle@v4
