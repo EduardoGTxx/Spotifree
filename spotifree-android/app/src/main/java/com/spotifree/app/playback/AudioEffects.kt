@@ -41,6 +41,14 @@ class AudioEffects {
     private var presetReverb: PresetReverb? = null
     private var loudness: LoudnessEnhancer? = null
     private var last: AppSettings? = null
+    var nativeDsp: uniffi.spotifree_core_ffi.AudioProcessorBridge? = null
+        private set
+
+    init {
+        runCatchingCancellable {
+            nativeDsp = uniffi.spotifree_core_ffi.AudioProcessorBridge(44100, 2)
+        }
+    }
 
     fun attach(audioSessionId: Int, settings: AppSettings) {
         if (audioSessionId == 0 || audioSessionId == sessionId) {
@@ -83,6 +91,11 @@ class AudioEffects {
     }
 
     private fun applyEqualizer(bandsDb: List<Int>) {
+        runCatchingCancellable {
+            bandsDb.forEachIndexed { idx, gain ->
+                nativeDsp?.setEqualizerBand(idx, gain.toFloat())
+            }
+        }
         val eq = equalizer ?: return
         runCatchingCancellable {
             val active = bandsDb.any { it != 0 }
@@ -101,6 +114,14 @@ class AudioEffects {
 
     private fun applyReverb(preset: String) {
         val profile = getReverbProfile(preset)
+        runCatchingCancellable {
+            if (profile != null) {
+                nativeDsp?.setReverbEnabled(true)
+                nativeDsp?.setReverbRoomSize((profile.decayTimeMs / 10000f).coerceIn(0.1f, 0.95f))
+            } else {
+                nativeDsp?.setReverbEnabled(false)
+            }
+        }
         val env = environmentalReverb
         val pr = presetReverb
 

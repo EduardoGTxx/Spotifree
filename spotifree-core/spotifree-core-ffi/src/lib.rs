@@ -60,6 +60,37 @@ impl AudioCacheBridge {
     }
 }
 
+#[derive(uniffi::Object)]
+pub struct AudioProcessorBridge {
+    inner: spotifree_core_audio::NativeAudioProcessor,
+}
+
+#[uniffi::export]
+impl AudioProcessorBridge {
+    #[uniffi::constructor]
+    pub fn new(sample_rate: i32, channels: i32) -> Arc<Self> {
+        Arc::new(Self {
+            inner: spotifree_core_audio::NativeAudioProcessor::new(sample_rate, channels),
+        })
+    }
+
+    pub fn set_reverb_enabled(&self, enabled: bool) {
+        self.inner.set_reverb_enabled(enabled);
+    }
+
+    pub fn set_reverb_room_size(&self, size: f32) {
+        self.inner.set_reverb_room_size(size);
+    }
+
+    pub fn set_equalizer_band(&self, band: i32, gain_db: f32) {
+        self.inner.set_equalizer_band(band, gain_db);
+    }
+
+    pub fn process_pcm(&self, input_pcm: Vec<u8>) -> Vec<u8> {
+        self.inner.process_pcm(&input_pcm)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
