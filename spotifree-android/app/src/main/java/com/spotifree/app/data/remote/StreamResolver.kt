@@ -72,6 +72,30 @@ class StreamResolver(
     suspend fun resolve(videoId: String, quality: String, avoidNewPipe: Boolean = false): ResolvedStream =
         withContext(Dispatchers.IO) {
             if (!avoidNewPipe) cached(videoId)?.let { return@withContext it }
+
+            // 1. Try high-performance native Rust core stream resolver
+            if (!avoidNewPipe) {
+                try {
+                    val native = uniffi.spotifree_core_ffi.resolveStreamUrl(videoId)
+                    val resolved = ResolvedStream(
+                        videoId = native.videoId,
+                        url = native.url,
+                        mimeType = native.mimeType,
+                        itag = native.itag,
+                        userAgent = "Spotifree-RustCore/0.1.0",
+                        expiresAt = System.currentTimeMillis() + 6 * 3600_000L,
+                        client = "RUST_INNERTUBE",
+                        loudnessDb = null,
+                        contentLength = -1L
+                    )
+                    return@withContext resolved.also { remember(it) }
+                } catch (ec: kotlin.coroutines.cancellation.CancellationException) {
+                    throw ec
+                } catch (e: Throwable) {
+                    Log.d(TAG, "Rust Core stream resolver fallback to JVM extractor: ${e.message}")
+                }
+            }
+
             var lastError: Throwable? = null
             if (!avoidNewPipe) {
                 try {

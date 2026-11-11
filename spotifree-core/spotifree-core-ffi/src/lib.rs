@@ -1,6 +1,7 @@
 pub mod error;
 
 pub use error::SpotifreeError;
+pub use spotifree_core_network::NativeStreamInfo;
 
 uniffi::setup_scaffolding!();
 
@@ -17,6 +18,13 @@ pub fn spotifree_core_ping(payload: String) -> Result<String, SpotifreeError> {
         });
     }
     Ok(format!("echo: {}", payload))
+}
+
+#[uniffi::export(async_runtime = "tokio")]
+pub async fn resolve_stream_url(video_id: String) -> Result<NativeStreamInfo, SpotifreeError> {
+    spotifree_core_network::resolve_stream(&video_id)
+        .await
+        .map_err(|e| SpotifreeError::Network { reason: e })
 }
 
 #[cfg(test)]

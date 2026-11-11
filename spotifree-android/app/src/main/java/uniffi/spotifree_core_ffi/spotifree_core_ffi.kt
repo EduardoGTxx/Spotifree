@@ -30,6 +30,16 @@ import java.nio.CharBuffer
 import java.nio.charset.CodingErrorAction
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.resume
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import uniffi.spotifree_core_network.FfiConverterTypeNativeStreamInfo
+import uniffi.spotifree_core_network.NativeStreamInfo
+import uniffi.spotifree_core_network.RustBuffer as RustBufferNativeStreamInfo
 
 // This is a helper for safely working with byte buffers returned from the Rust code.
 // A rust-owned buffer is represented by its capacity, its current length, and a
@@ -715,6 +725,8 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 
 
 
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -730,6 +742,8 @@ internal interface UniffiLib : Library {
         
     }
 
+    fun uniffi_spotifree_core_ffi_fn_func_resolve_stream_url(`videoId`: RustBuffer.ByValue,
+    ): Long
     fun uniffi_spotifree_core_ffi_fn_func_spotifree_core_ping(`payload`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_spotifree_core_ffi_fn_func_spotifree_core_version(uniffi_out_err: UniffiRustCallStatus, 
@@ -846,6 +860,8 @@ internal interface UniffiLib : Library {
     ): Unit
     fun ffi_spotifree_core_ffi_rust_future_complete_void(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_spotifree_core_ffi_checksum_func_resolve_stream_url(
+    ): Short
     fun uniffi_spotifree_core_ffi_checksum_func_spotifree_core_ping(
     ): Short
     fun uniffi_spotifree_core_ffi_checksum_func_spotifree_core_version(
@@ -867,6 +883,9 @@ private fun uniffiCheckContractApiVersion(lib: UniffiLib) {
 
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: UniffiLib) {
+    if (lib.uniffi_spotifree_core_ffi_checksum_func_resolve_stream_url() != 8925.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_spotifree_core_ffi_checksum_func_spotifree_core_ping() != 20543.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -876,6 +895,46 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
 }
 
 // Async support
+// Async return type handlers
+
+internal const val UNIFFI_RUST_FUTURE_POLL_READY = 0.toByte()
+internal const val UNIFFI_RUST_FUTURE_POLL_MAYBE_READY = 1.toByte()
+
+internal val uniffiContinuationHandleMap = UniffiHandleMap<CancellableContinuation<Byte>>()
+
+// FFI type for Rust future continuations
+internal object uniffiRustFutureContinuationCallbackImpl: UniffiRustFutureContinuationCallback {
+    override fun callback(data: Long, pollResult: Byte) {
+        uniffiContinuationHandleMap.remove(data).resume(pollResult)
+    }
+}
+
+internal suspend fun<T, F, E: kotlin.Exception> uniffiRustCallAsync(
+    rustFuture: Long,
+    pollFunc: (Long, UniffiRustFutureContinuationCallback, Long) -> Unit,
+    completeFunc: (Long, UniffiRustCallStatus) -> F,
+    freeFunc: (Long) -> Unit,
+    liftFunc: (F) -> T,
+    errorHandler: UniffiRustCallStatusErrorHandler<E>
+): T {
+    try {
+        do {
+            val pollResult = suspendCancellableCoroutine<Byte> { continuation ->
+                pollFunc(
+                    rustFuture,
+                    uniffiRustFutureContinuationCallbackImpl,
+                    uniffiContinuationHandleMap.insert(continuation)
+                )
+            }
+        } while (pollResult != UNIFFI_RUST_FUTURE_POLL_READY);
+
+        return liftFunc(
+            uniffiRustCallWithError(errorHandler, { status -> completeFunc(rustFuture, status) })
+        )
+    } finally {
+        freeFunc(rustFuture)
+    }
+}
 
 // Public interface members begin here.
 
@@ -1098,6 +1157,33 @@ public object FfiConverterTypeSpotifreeError : FfiConverterRustBuffer<SpotifreeE
     }
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+    @Throws(SpotifreeException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+     suspend fun `resolveStreamUrl`(`videoId`: kotlin.String) : NativeStreamInfo {
+        return uniffiRustCallAsync(
+        UniffiLib.INSTANCE.uniffi_spotifree_core_ffi_fn_func_resolve_stream_url(FfiConverterString.lower(`videoId`),),
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_spotifree_core_ffi_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_spotifree_core_ffi_rust_future_complete_rust_buffer(future, continuation).let { RustBufferNativeStreamInfo.create(it.capacity.toULong(), it.len.toULong(), it.data) } },
+        { future -> UniffiLib.INSTANCE.ffi_spotifree_core_ffi_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterTypeNativeStreamInfo.lift(it) },
+        // Error FFI converter
+        SpotifreeException.ErrorHandler,
+    )
+    }
+
     @Throws(SpotifreeException::class) fun `spotifreeCorePing`(`payload`: kotlin.String): kotlin.String {
             return FfiConverterString.lift(
     uniffiRustCallWithError(SpotifreeException) { _status ->
