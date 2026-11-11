@@ -21,6 +21,14 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Compilar y Testear Rust Core
+        run: |
+          cd ../spotifree-core
+          cargo test
+          cargo build -p spotifree-core-ffi
+
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Pruebas y APK de depuración
