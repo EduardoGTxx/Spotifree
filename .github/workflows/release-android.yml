@@ -19,7 +19,7 @@ permissions:
 
 concurrency:
   group: release-${{ github.event.inputs.tag || github.ref_name }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   EXPECTED_CERT_SHA256: 808b604ebc15a06b63ef72ab57456851d496c4350263f7862b659cdd98f01291
