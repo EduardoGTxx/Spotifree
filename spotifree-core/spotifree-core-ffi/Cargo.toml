@@ -1,0 +1,24 @@
+[package]
+name = "spotifree-core-ffi"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "staticlib", "rlib"]
+name = "spotifree_core_ffi"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+
+[dependencies]
+uniffi = { version = "0.28.3", default-features = false, features = ["tokio", "cli"] }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+spotifree-core-network = { path = "../spotifree-core-network" }
+spotifree-core-storage = { path = "../spotifree-core-storage" }
+spotifree-core-audio = { path = "../spotifree-core-audio" }

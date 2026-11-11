@@ -172,6 +172,12 @@ dependencies {
     // Google Drive authorization (drive.file scope) for backups
     implementation("com.google.android.gms:play-services-auth:21.2.0")
 
+    implementation("net.java.dev.jna:jna:5.14.0@aar")
+    testImplementation("net.java.dev.jna:jna:5.14.0")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+}
+
+tasks.withType<Test> {
+    systemProperty("jna.library.path", rootProject.file("../spotifree-core/target/debug").absolutePath)
 }
