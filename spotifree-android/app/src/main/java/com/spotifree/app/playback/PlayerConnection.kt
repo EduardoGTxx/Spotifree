@@ -95,6 +95,7 @@ class PlayerConnection(private val context: Context, private val scope: Coroutin
 
                 override fun onStop(owner: LifecycleOwner) {
                     foreground = false
+                    if (!_state.value.isPlaying) ticker?.cancel()
                 }
             })
         }
@@ -161,6 +162,9 @@ class PlayerConnection(private val context: Context, private val scope: Coroutin
     private val listener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
             refresh(rebuildQueue = events.contains(Player.EVENT_TIMELINE_CHANGED))
+            if (events.contains(Player.EVENT_IS_PLAYING_CHANGED) || events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED)) {
+                startTicker()
+            }
         }
 
         override fun onPlayerError(error: PlaybackException) {
@@ -211,6 +215,7 @@ class PlayerConnection(private val context: Context, private val scope: Coroutin
 
     private fun startTicker() {
         ticker?.cancel()
+        if (!_state.value.isPlaying && !foreground) return
         ticker = scope.launch(Dispatchers.Main) {
             while (isActive) {
                 controller?.let { c ->
@@ -218,6 +223,7 @@ class PlayerConnection(private val context: Context, private val scope: Coroutin
                     val d = c.duration
                     if (d > 0 && d != _state.value.durationMs) _state.value = _state.value.copy(durationMs = d)
                 }
+                if (!_state.value.isPlaying && !foreground) break
                 // Visible UI: smooth lyrics and progress. In the background only Jam and the widget
                 // read the position, so a sample per second is enough (4x fewer wake-ups).
                 delay(if (_state.value.isPlaying && foreground) 250 else 1000)

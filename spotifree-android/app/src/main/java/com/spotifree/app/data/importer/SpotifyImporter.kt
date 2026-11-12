@@ -142,7 +142,20 @@ class SpotifyImporter(private val context: Context? = null, private val db: AppD
     }
 
     private fun parse(input: InputStream, name: String): JsonElement? = runCatchingCancellable {
-        val text = input.readBytes().toString(Charsets.UTF_8).removePrefix("\uFEFF")
+        val nonClosing = object : java.io.FilterInputStream(input) {
+            override fun close() {
+                // Do not close underlying stream; ZipInputStream must remain open for next entries
+            }
+        }
+        val pushback = java.io.PushbackInputStream(nonClosing, 3)
+        val bom = ByteArray(3)
+        val read = pushback.read(bom, 0, 3)
+        if (read == 3 && bom[0] == 0xEF.toByte() && bom[1] == 0xBB.toByte() && bom[2] == 0xBF.toByte()) {
+            // BOM skipped
+        } else if (read > 0) {
+            pushback.unread(bom, 0, read)
+        }
+        val text = java.io.InputStreamReader(pushback, Charsets.UTF_8).use { it.readText() }
         json.parseToJsonElement(text)
     }.getOrNull()
 

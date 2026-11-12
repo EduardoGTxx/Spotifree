@@ -1,4 +1,3 @@
-use crate::cipher::{decipher_signature, parse_query_string};
 use crate::models::NativeStreamInfo;
 use serde_json::Value;
 
@@ -70,22 +69,10 @@ pub fn parse_player_response(video_id: &str, json: &Value) -> Result<NativeStrea
                     bitrate,
                     duration_seconds: duration,
                 });
-            } else if let Some(sig_cipher) = fmt["signatureCipher"].as_str() {
-                let params = parse_query_string(sig_cipher);
-                if let (Some(u), Some(s)) = (params.get("url"), params.get("s")) {
-                    let sig = decipher_signature(s);
-                    let sp = params.get("sp").map(|s| s.as_str()).unwrap_or("sig");
-                    let final_url = format!("{}&{}={}", u, sp, sig);
-                    return Ok(NativeStreamInfo {
-                        video_id: video_id.to_string(),
-                        url: final_url,
-                        mime_type: mime.to_string(),
-                        itag,
-                        bitrate,
-                        duration_seconds: duration,
-                    });
-                }
             }
+            // If YouTube returns a signatureCipher, it requires player JavaScript
+            // de-obfuscation. Rather than returning a fake signature that fails with HTTP 403,
+            // we fall back so the caller can use the full NewPipe JS engine.
         }
     }
 

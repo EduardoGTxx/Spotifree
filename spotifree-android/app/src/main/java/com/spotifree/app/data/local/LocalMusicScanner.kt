@@ -26,6 +26,8 @@ class LocalMusicScanner(private val context: Context, private val db: AppDatabas
             MediaStore.Audio.Media.ALBUM,
             MediaStore.Audio.Media.ALBUM_ID,
             MediaStore.Audio.Media.DURATION,
+            @Suppress("DEPRECATION")
+            MediaStore.Audio.Media.DATA,
         )
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} >= 30000"
         context.contentResolver.query(

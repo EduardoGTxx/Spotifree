@@ -46,7 +46,8 @@ class AudioEffects {
 
     init {
         runCatchingCancellable {
-            nativeDsp = uniffi.spotifree_core_ffi.AudioProcessorBridge(44100, 2)
+            nativeDsp = com.spotifree.app.core.SpotifreeCoreManager.audioProcessor
+                ?: uniffi.spotifree_core_ffi.AudioProcessorBridge(44100, 2)
         }
     }
 

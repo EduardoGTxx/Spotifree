@@ -20,6 +20,14 @@ impl NativeAudioProcessor {
         }
     }
 
+    pub fn sample_rate(&self) -> i32 {
+        self.sample_rate
+    }
+
+    pub fn channels(&self) -> i32 {
+        self.channels
+    }
+
     pub fn set_reverb_enabled(&self, enabled: bool) {
         self.reverb.lock().enabled = enabled;
     }

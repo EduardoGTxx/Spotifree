@@ -17,20 +17,43 @@ const FREQ_BANDS: [(usize, usize); 4] = [
     (35, 93),
 ];
 
+struct TwiddleTable {
+    cos: [f32; WINDOW_SIZE],
+    sin: [f32; WINDOW_SIZE],
+}
+
+impl TwiddleTable {
+    fn get() -> &'static Self {
+        use std::sync::OnceLock;
+        static TABLE: OnceLock<TwiddleTable> = OnceLock::new();
+        TABLE.get_or_init(|| {
+            let mut cos = [0.0f32; WINDOW_SIZE];
+            let mut sin = [0.0f32; WINDOW_SIZE];
+            for m in 0..WINDOW_SIZE {
+                let angle = 2.0 * PI * (m as f32) / (WINDOW_SIZE as f32);
+                cos[m] = angle.cos();
+                sin[m] = angle.sin();
+            }
+            TwiddleTable { cos, sin }
+        })
+    }
+}
+
 fn compute_dft_magnitudes(window: &[f32]) -> Vec<f32> {
     let n = window.len();
     let num_bins = 100.min(n / 2);
     let mut magnitudes = vec![0.0f32; num_bins];
+    let table = TwiddleTable::get();
 
     for (k, mag) in magnitudes.iter_mut().enumerate() {
         let mut real = 0.0f32;
         let mut imag = 0.0f32;
-        let omega = 2.0 * PI * (k as f32) / (n as f32);
+        let mut angle_idx = 0;
 
-        for (t, &sample) in window.iter().enumerate() {
-            let angle = omega * (t as f32);
-            real += sample * angle.cos();
-            imag -= sample * angle.sin();
+        for &sample in window.iter() {
+            real += sample * table.cos[angle_idx];
+            imag -= sample * table.sin[angle_idx];
+            angle_idx = (angle_idx + k) & (WINDOW_SIZE - 1);
         }
 
         *mag = (real * real + imag * imag).sqrt();

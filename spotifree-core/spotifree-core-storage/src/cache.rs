@@ -23,6 +23,10 @@ impl NativeAudioCache {
         })
     }
 
+    pub fn max_bytes(&self) -> u64 {
+        self.max_bytes
+    }
+
     fn file_path(&self, key: &str) -> PathBuf {
         let sanitized: String = key
             .chars()

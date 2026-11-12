@@ -82,8 +82,8 @@ class StreamResolver(
                         url = native.url,
                         mimeType = native.mimeType,
                         itag = native.itag,
-                        userAgent = "Spotifree-RustCore/0.1.0",
-                        expiresAt = System.currentTimeMillis() + 6 * 3600_000L,
+                        userAgent = "com.google.android.apps.youtube.music/6.42.52 (Linux; U; Android 14)",
+                        expiresAt = expiryOf(native.url),
                         client = "RUST_INNERTUBE",
                         loudnessDb = null,
                         contentLength = -1L
