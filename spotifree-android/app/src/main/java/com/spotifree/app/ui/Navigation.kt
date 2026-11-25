@@ -63,8 +63,7 @@ class AppActions(
         val newIndex = start?.let { allowed.indexOf(it) }?.coerceAtLeast(0) ?: 0
         val offline = graph.settings.current.offlineMode
         if (offline) {
-            val done = graph.downloads.doneIds.value
-            val playable = allowed.filter { it.isLocal || it.id in done }
+            val playable = allowed.filter { it.isLocal || graph.downloads.isDownloaded(it) }
             if (playable.isEmpty()) {
                 graph.messages.post(s["offlineNothingPlayable"], isError = true)
                 return
@@ -82,16 +81,17 @@ class AppActions(
      */
     fun playFromSearch(t: Track) {
         if (graph.library.isBlocked(t)) return
-        val offline = graph.settings.current.offlineMode
+        val offline = graph.settings.current.offlineMode || !com.spotifree.app.playback.Network.isNetworkAllowed(graph.context, graph.settings.current.allowMobileData)
         if (offline) {
-            val done = graph.downloads.doneIds.value
-            if (!t.isLocal && t.id !in done) {
+            if (!t.isLocal && !graph.downloads.isDownloaded(t)) {
                 graph.messages.post(s["offlineNothingPlayable"], isError = true)
                 return
             }
             scope.launch {
-                val sample = graph.library.sampleTracks(20, excludeId = t.id)
-                    .filter { it.isLocal || it.id in done }
+                val sample = graph.downloads.doneTracks()
+                    .filter { it.id != t.id && !graph.library.isBlocked(it) }
+                    .shuffled()
+                    .take(25)
                 graph.player.playTracks(listOf(t) + sample, 0)
             }
             return
@@ -169,7 +169,8 @@ class AppActions(
     }
 
     fun removeDownload(t: Track) = scope.launch {
-        graph.downloads.remove(t.id)
+        val targetId = graph.downloads.findDownload(t)?.trackId ?: t.id
+        graph.downloads.remove(targetId)
         graph.messages.post(s["downloadRemoved"])
     }
 

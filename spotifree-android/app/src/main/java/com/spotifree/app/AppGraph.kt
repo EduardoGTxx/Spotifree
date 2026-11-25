@@ -3,8 +3,9 @@ package com.spotifree.app
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
+import com.spotifree.app.playback.ConnectionKind
 import com.spotifree.app.playback.Network
+import com.spotifree.app.playback.NetworkPolicy
 import com.spotifree.app.data.db.AppDatabase
 import com.spotifree.app.data.download.DownloadRepository
 import com.spotifree.app.data.library.LibraryRepository
@@ -68,8 +69,25 @@ class AppGraph(val context: Context) {
     ) { t -> library.resolveOnYouTube(t)?.artworkUrl }
     val backups = com.spotifree.app.data.importer.BackupManager(context, db, settings)
 
-    val trackResolver = TrackResolver(context, db, library, streams, settings)
+    val trackResolver = TrackResolver(context, db, library, downloads, streams, settings)
     val player = PlayerConnection(context, scope)
+
+    @Volatile
+    private var lastConnectionKind: ConnectionKind? = null
+
+    private fun handleNetworkStateChange() {
+        val newKind = Network.currentConnection(context)
+        val prev = lastConnectionKind
+        lastConnectionKind = newKind
+        val updated = NetworkPolicy.onNetworkChange(settings.current, prev, newKind)
+        if (updated != null) {
+            scope.launch {
+                settings.update { cur ->
+                    NetworkPolicy.onNetworkChange(cur, prev, newKind) ?: cur
+                }
+            }
+        }
+    }
 
     init {
         com.spotifree.app.playback.MediaItems.localCover = { id ->
@@ -85,6 +103,16 @@ class AppGraph(val context: Context) {
             Localization(locale.language.ifBlank { "es" }, country),
             ContentCountry(country),
         )
+        // Automatic Wi-Fi / Mobile Data detection -> auto-toggle Offline Mode
+        handleNetworkStateChange()
+        runCatching {
+            val cm = context.getSystemService(ConnectivityManager::class.java)
+            cm?.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: android.net.Network) = handleNetworkStateChange()
+                override fun onCapabilitiesChanged(network: android.net.Network, caps: NetworkCapabilities) = handleNetworkStateChange()
+                override fun onLost(network: android.net.Network) = handleNetworkStateChange()
+            })
+        }
         // Immediately sever all active sockets, in-flight requests, WebSockets, and download jobs when Offline Mode is enabled
         scope.launch {
             settings.settings

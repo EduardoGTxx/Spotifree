@@ -15,6 +15,7 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.datasource.HttpDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.CommandButton
@@ -94,7 +95,12 @@ class PlaybackService : MediaLibraryService() {
         val cache = TrackResolver.cache(this, STREAM_CACHE_MB)
         val dataSourceFactory = TrackResolver.dataSourceFactory(this, graph.http, graph.trackResolver, cache) { true }
 
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(15_000, 50_000, 1_000, 2_000)
+            .build()
+
         player = ExoPlayer.Builder(this)
+            .setLoadControl(loadControl)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -320,7 +326,8 @@ class PlaybackService : MediaLibraryService() {
 
     private fun maybeQueueRadio(force: Boolean = false, playAfter: Boolean = false, seedTrackId: String? = null) {
         val s = graph.settings.current
-        if ((!force && !s.autoplayRadio) || s.offlineMode) return
+        val offline = s.offlineMode || !Network.isNetworkAllowed(this, s.allowMobileData)
+        if (!force && (!s.autoplayRadio || offline)) return
         if (player.repeatMode != Player.REPEAT_MODE_OFF && !force) return
         val remaining = player.mediaItemCount - player.currentMediaItemIndex - 1
         if (!force && remaining > 4) return
@@ -337,9 +344,28 @@ class PlaybackService : MediaLibraryService() {
         val seedKey = "${seed.id}#w$radioWave"
         if (radioJob?.isActive == true || (!force && radioSeedId == seedKey)) return
         radioJob = scope.launch {
-            val resolvedSeed = seed.youtubeId?.let { seed } ?: graph.library.track(seed.id)?.let { graph.library.resolveOnYouTube(it) }
             val existing = HashSet<String>()
             for (i in 0 until player.mediaItemCount) existing += player.getMediaItemAt(i).mediaId
+
+            if (offline) {
+                val localRadio = graph.downloads.doneTracks()
+                    .filter { it.id !in existing && !graph.library.isBlocked(it) }
+                    .shuffled()
+                    .take(25)
+                if (localRadio.isEmpty()) return@launch
+                radioSeedId = seedKey
+                radioWave++
+                val wasEnded = player.playbackState == Player.STATE_ENDED
+                player.addMediaItems(localRadio.map { MediaItems.toMediaItem(it) })
+                if (playAfter && wasEnded) {
+                    player.seekTo(player.currentMediaItemIndex + 1, 0)
+                    player.prepare()
+                    player.play()
+                }
+                return@launch
+            }
+
+            val resolvedSeed = seed.youtubeId?.let { seed } ?: graph.library.track(seed.id)?.let { graph.library.resolveOnYouTube(it) }
 
             val isMultiContext = contextSeeds.size > 1
             val waveSeeds = buildList {
@@ -407,7 +433,7 @@ class PlaybackService : MediaLibraryService() {
         if (graph.settings.current.offlineMode) return
         val next = player.nextMediaItemIndex.takeIf { it != C.INDEX_UNSET } ?: return
         val track = MediaItems.toTrack(player.getMediaItemAt(next))
-        if (track.isLocal) return
+        if (track.isLocal || graph.downloads.isDownloaded(track)) return
         graph.scope.launch(Dispatchers.IO) {
             runCatchingCancellable {
                 val t = track.youtubeId?.let { track } ?: graph.library.track(track.id)?.let { graph.library.resolveOnYouTube(it) }

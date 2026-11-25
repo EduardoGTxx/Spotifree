@@ -94,8 +94,9 @@ fun NowPlayingScreen(onClose: () -> Unit) {
     val graph = LocalGraph.current
     val actions = LocalActions.current
     val state by graph.player.state.collectAsStateWithLifecycle()
-    val liked by graph.library.likedIds.collectAsStateWithLifecycle()
+    val likedIndex by graph.library.likedIndex.collectAsStateWithLifecycle()
     val track = state.current ?: return
+    val isLiked = track in likedIndex
     val c = LocalSpotifreeColors.current
     val artworkUrl = rememberTrackArtwork(track)
     val cover by rememberCoverColor(artworkUrl, c.elevated)
@@ -113,6 +114,7 @@ fun NowPlayingScreen(onClose: () -> Unit) {
         if (lyr) {
             LyricsView(
                 track = track,
+                coverColorOverride = animated,
                 onMinimize = { showLyrics = false },
                 modifier = Modifier.fillMaxSize(),
             )
@@ -150,7 +152,7 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                                 CoverArt(artworkUrl, onSwipe = { if (it < 0) graph.player.next() else graph.player.previous() })
                             }
                             Column(Modifier.weight(1f).padding(start = 16.dp)) {
-                                TitleRow(track.title, track.artist, track.id in liked, onLike = { actions.toggleLike(track) }, onArtist = { onClose(); actions.openArtist(track) })
+                                TitleRow(track.title, track.artist, isLiked, onLike = { actions.toggleLike(track) }, onArtist = { onClose(); actions.openArtist(track) })
                                 Controls(onSheet = { sheet = it }, showLyrics = showLyrics, onToggleLyrics = { showLyrics = !showLyrics })
                             }
                         }
@@ -159,7 +161,7 @@ fun NowPlayingScreen(onClose: () -> Unit) {
                             CoverArt(artworkUrl, onSwipe = { if (it < 0) graph.player.next() else graph.player.previous() })
                         }
                         Column(Modifier.padding(horizontal = 24.dp)) {
-                            TitleRow(track.title, track.artist, track.id in liked, onLike = { actions.toggleLike(track) }, onArtist = { onClose(); actions.openArtist(track) })
+                            TitleRow(track.title, track.artist, isLiked, onLike = { actions.toggleLike(track) }, onArtist = { onClose(); actions.openArtist(track) })
                             Controls(onSheet = { sheet = it }, showLyrics = showLyrics, onToggleLyrics = { showLyrics = !showLyrics })
                         }
                     }
@@ -207,7 +209,7 @@ private fun TitleRow(title: String, artist: String, liked: Boolean, onLike: () -
     val graph = LocalGraph.current
     val actions = LocalActions.current
     val track = graph.player.state.collectAsStateWithLifecycle().value.current
-    val downloads by graph.downloads.all.collectAsStateWithLifecycle()
+    val downloadIndex by graph.downloads.index.collectAsStateWithLifecycle()
     Row(Modifier.fillMaxWidth().padding(top = 20.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.headlineSmall, maxLines = 1,
@@ -217,7 +219,7 @@ private fun TitleRow(title: String, artist: String, liked: Boolean, onLike: () -
         }
         // Previous app: download button beside the heart
         if (track != null && !track.isLocal) {
-            val d = downloads[track.id]
+            val d = downloadIndex.find(track)
             IconButton(onClick = { if (d?.state != DownloadState.DONE) actions.download(track) }) {
                 when (d?.state) {
                     DownloadState.DONE -> Icon(Icons.Default.DownloadDone, t("downloaded"), tint = c.accent, modifier = Modifier.size(28.dp))

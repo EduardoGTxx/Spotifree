@@ -188,10 +188,108 @@ class IntegrationLogicTest {
     }
 
     @Test
-    fun randomLyricsPaletteNeverRepeatsBackToBack() {
-        val picks = (1..30).map { com.spotifree.app.ui.player.nextRandomLyricsPalette() }
-        assertTrue(picks.zipWithNext().all { (a, b) -> a != b })
-        assertTrue(picks.distinct().size >= 3)
+    fun lyricsPaletteMatchesCoverColorDeterministically() {
+        val yellowCover = androidx.compose.ui.graphics.Color(0xFF8C7A1F)
+        val baseBg = androidx.compose.ui.graphics.Color(0xFF121212)
+        val p1 = com.spotifree.app.ui.player.lyricsPaletteForCover(yellowCover, baseBg)
+        val p2 = com.spotifree.app.ui.player.lyricsPaletteForCover(yellowCover, baseBg)
+        assertEquals(p1, p2)
+        assertEquals(yellowCover, p1.top)
+        assertEquals(baseBg, p1.bottom)
+        assertTrue(p1.glow.red >= yellowCover.red && p1.glow.green >= yellowCover.green)
+    }
+
+    @Test
+    fun networkPolicyAutoTogglesOfflineAndMobileDataCorrectly() {
+        val base = AppSettings(offlineMode = false, allowMobileData = false)
+        // Mobile data without allowMobileData -> auto-enables offlineMode
+        val onMobile = com.spotifree.app.playback.NetworkPolicy.onNetworkChange(
+            base,
+            previousKind = com.spotifree.app.playback.ConnectionKind.WIFI,
+            newKind = com.spotifree.app.playback.ConnectionKind.MOBILE,
+        )
+        assertNotNull(onMobile)
+        assertTrue(onMobile!!.offlineMode)
+
+        // Returning to Wi-Fi -> auto-disables offlineMode
+        val backOnWifi = com.spotifree.app.playback.NetworkPolicy.onNetworkChange(
+            onMobile,
+            previousKind = com.spotifree.app.playback.ConnectionKind.MOBILE,
+            newKind = com.spotifree.app.playback.ConnectionKind.WIFI,
+        )
+        assertNotNull(backOnWifi)
+        assertFalse(backOnWifi!!.offlineMode)
+
+        // Already on Wi-Fi with manual offlineMode=true -> stays offline
+        val stayManualOffline = com.spotifree.app.playback.NetworkPolicy.onNetworkChange(
+            base.copy(offlineMode = true),
+            previousKind = com.spotifree.app.playback.ConnectionKind.WIFI,
+            newKind = com.spotifree.app.playback.ConnectionKind.WIFI,
+        )
+        assertNull(stayManualOffline)
+
+        // Manually disabling offlineMode while on mobile data -> enables allowMobileData too
+        val manualDisableOnMobile = com.spotifree.app.playback.NetworkPolicy.onManualOfflineToggle(
+            base.copy(offlineMode = true, allowMobileData = false),
+            enableOffline = false,
+            kind = com.spotifree.app.playback.ConnectionKind.MOBILE,
+        )
+        assertFalse(manualDisableOnMobile.offlineMode)
+        assertTrue(manualDisableOnMobile.allowMobileData)
+
+        // Manually disabling allowMobileData while on mobile data -> enables offlineMode
+        val disableMobileDataOnMobile = com.spotifree.app.playback.NetworkPolicy.onManualAllowMobileDataToggle(
+            base.copy(offlineMode = false, allowMobileData = true),
+            allowMobile = false,
+            kind = com.spotifree.app.playback.ConnectionKind.MOBILE,
+        )
+        assertFalse(disableMobileDataOnMobile.allowMobileData)
+        assertTrue(disableMobileDataOnMobile.offlineMode)
+    }
+
+    @Test
+    fun trackAndDownloadMatchIndicesMatchAcrossSpotifyAndYoutubeIds() {
+        val savedSpotify = com.spotifree.app.data.model.Track(
+            id = "spotify-abc123",
+            title = "Chicago",
+            artist = "Michael Jackson",
+            videoId = "ytVid999",
+        )
+        val searchResultSameVid = com.spotifree.app.data.model.Track(
+            id = "yt-ytVid999",
+            title = "Chicago",
+            artist = "Michael Jackson",
+            videoId = "ytVid999",
+        )
+        val searchResultOtherUpload = com.spotifree.app.data.model.Track(
+            id = "yt-otherUpload777",
+            title = "Chicago (Official Audio)",
+            artist = "Michael Jackson - Topic",
+            videoId = "otherUpload777",
+        )
+        val likedIdx = com.spotifree.app.data.library.TrackMatchIndex.fromTracks(listOf(savedSpotify))
+        assertTrue(searchResultSameVid in likedIdx)
+        assertTrue(searchResultOtherUpload in likedIdx)
+        assertEquals("spotify-abc123", likedIdx.canonicalId(searchResultSameVid))
+
+        val dlEntity = com.spotifree.app.data.db.DownloadEntity(
+            trackId = savedSpotify.id,
+            state = com.spotifree.app.data.db.DownloadState.DONE,
+            filePath = "/tmp/chicago.m4a",
+        )
+        val dlIdx = com.spotifree.app.data.download.DownloadMatchIndex.from(
+            listOf(
+                com.spotifree.app.data.db.DownloadWithTrack(
+                    download = dlEntity,
+                    title = savedSpotify.title,
+                    artist = savedSpotify.artist,
+                    videoId = savedSpotify.videoId,
+                )
+            )
+        )
+        assertTrue(dlIdx.isDone(searchResultSameVid))
+        assertTrue(dlIdx.isDone(searchResultOtherUpload))
+        assertEquals("/tmp/chicago.m4a", dlIdx.find(searchResultOtherUpload)?.filePath)
     }
 
     @Test

@@ -87,10 +87,10 @@ fun TrackMenuSheet(track: Track, ctx: MenuContext, onDismiss: () -> Unit) {
     val actions = LocalActions.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val liked by graph.library.likedIds.collectAsStateWithLifecycle()
-    val downloads by graph.downloads.all.collectAsStateWithLifecycle()
-    val d = downloads[track.id]
-    val isLiked = track.id in liked
+    val likedIndex by graph.library.likedIndex.collectAsStateWithLifecycle()
+    val downloadIndex by graph.downloads.index.collectAsStateWithLifecycle()
+    val d = downloadIndex.find(track)
+    val isLiked = track in likedIndex
     val strings = com.spotifree.app.ui.i18n.LocalStrings.current
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val c = LocalSpotifreeColors.current
@@ -133,7 +133,7 @@ fun TrackMenuSheet(track: Track, ctx: MenuContext, onDismiss: () -> Unit) {
                         }
                     }
                     DownloadState.RUNNING, DownloadState.QUEUED -> MenuItem(Icons.Default.FileDownloadOff, t("cancelDownload")) {
-                        act { scope.launch { graph.downloads.cancel(track.id) } }
+                        act { scope.launch { graph.downloads.cancel(d.trackId) } }
                     }
                     else -> MenuItem(Icons.Default.Download, t("download")) { act { actions.download(track) } }
                 }

@@ -78,9 +78,9 @@ fun formatMs(ms: Long) = formatDuration((ms / 1000).toInt()).ifEmpty { "0:00" }
 fun rememberTrackArtwork(track: Track): String? {
     val graph = LocalGraph.current
     val settings by graph.settings.settings.collectAsStateWithLifecycle()
-    val downloads by graph.downloads.all.collectAsStateWithLifecycle()
+    val downloadIndex by graph.downloads.index.collectAsStateWithLifecycle()
     val resolved by graph.artwork.resolvedCovers.collectAsStateWithLifecycle()
-    val localCover = downloads[track.id]?.coverPath?.takeIf { it.isNotBlank() }
+    val localCover = downloadIndex.find(track)?.coverPath?.takeIf { it.isNotBlank() }
     val overrideUrl = resolved[track.id]
     if (localCover == null && overrideUrl == null && !track.isLocal && !settings.offlineMode) {
         LaunchedEffect(track.id, track.coverUrl, settings.offlineMode) {
@@ -136,10 +136,10 @@ fun Artwork(
 
 /** Small status icon: downloaded (accent), downloading (spinner). */
 @Composable
-fun DownloadBadge(trackId: String, modifier: Modifier = Modifier) {
+fun DownloadBadge(track: Track, modifier: Modifier = Modifier) {
     val graph = LocalGraph.current
-    val all by graph.downloads.all.collectAsStateWithLifecycle()
-    val d = all[trackId] ?: return
+    val index by graph.downloads.index.collectAsStateWithLifecycle()
+    val d = index.find(track) ?: return
     val c = LocalSpotifreeColors.current
     when (d.state) {
         DownloadState.DONE -> Icon(Icons.Default.ArrowDownward, null, tint = Color.Black,
@@ -164,7 +164,8 @@ fun TrackRow(
 ) {
     val c = LocalSpotifreeColors.current
     val graph = LocalGraph.current
-    val liked by graph.library.likedIds.collectAsStateWithLifecycle()
+    val likedIndex by graph.library.likedIndex.collectAsStateWithLifecycle()
+    val isLiked = track in likedIndex
     Row(
         modifier
             .fillMaxWidth()
@@ -186,11 +187,11 @@ fun TrackRow(
             Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 color = if (isCurrent) c.accent else Color.White, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (track.id in liked) {
+                if (isLiked) {
                     Icon(Icons.Default.Favorite, null, tint = c.accent, modifier = Modifier.size(12.dp))
                     Spacer(Modifier.width(4.dp))
                 }
-                DownloadBadge(track.id, Modifier.padding(end = 4.dp))
+                DownloadBadge(track, Modifier.padding(end = 4.dp))
                 Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, color = c.textSecondary, style = MaterialTheme.typography.bodyMedium)
             }
         }

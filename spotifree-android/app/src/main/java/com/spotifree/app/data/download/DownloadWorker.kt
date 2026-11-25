@@ -35,20 +35,38 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
         try {
             if (track.youtubeId == null) track = repo.resolveOnYouTube(track) ?: throw StreamUnavailableException("not_found")
             val videoId = track.youtubeId ?: throw StreamUnavailableException("not_found")
-            // A retry after a 403 / bot check skips the extractor and uses the fallback clients
-            val stream = repo.streams.resolve(videoId, repo.quality, avoidNewPipe = runAttemptCount > 0)
-            val ext = when {
-                stream.mimeType.contains("webm") -> "webm"
-                stream.mimeType.contains("mp4") || stream.mimeType.contains("m4a") -> "m4a"
-                else -> "audio"
-            }
             val base = repo.fileBase(trackId)
-            val tmp = File(repo.downloadsDir, "$base.$ext.part")
-            val target = File(repo.downloadsDir, "$base.$ext")
-            val total = downloadRanged(repo, stream.url, stream.userAgent, tmp, stream.contentLength) { done, length ->
-                val p = if (length > 0) done.toFloat() / length else 0f
-                setProgress(workDataOf(KEY_PROGRESS to p))
-                dao.setState(trackId, DownloadState.RUNNING, p)
+            val failedClients = HashSet<String>()
+            var stream = repo.streams.resolve(videoId, repo.quality, avoidNewPipe = runAttemptCount > 0)
+            var ext: String
+            var tmp: File
+            var target: File
+            var total: Long
+            while (true) {
+                ext = when {
+                    stream.mimeType.contains("webm") -> "webm"
+                    stream.mimeType.contains("mp4") || stream.mimeType.contains("m4a") -> "m4a"
+                    else -> "audio"
+                }
+                tmp = File(repo.downloadsDir, "$base.$ext.part")
+                target = File(repo.downloadsDir, "$base.$ext")
+                try {
+                    total = downloadRanged(repo, stream.url, stream.userAgent, tmp, stream.contentLength) { done, length ->
+                        val p = if (length > 0) done.toFloat() / length else 0f
+                        setProgress(workDataOf(KEY_PROGRESS to p))
+                        dao.setState(trackId, DownloadState.RUNNING, p)
+                    }
+                    break
+                } catch (e: IllegalStateException) {
+                    if (e.message == "http_403" && failedClients.size < 3) {
+                        failedClients += stream.client
+                        repo.streams.invalidate(videoId)
+                        if (tmp.exists() && tmp.length() == 0L) tmp.delete()
+                        stream = repo.streams.resolve(videoId, repo.quality, avoidNewPipe = true, excludeClients = failedClients)
+                    } else {
+                        throw e
+                    }
+                }
             }
             if (total < 32 * 1024) throw IllegalStateException("file_too_small")
             if (target.exists()) target.delete()
@@ -64,15 +82,8 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 isManual = row.isManual,
             )
             dao.upsert(done)
-            val coverUrl = if (YouTubeIds.isLowResVideoThumbnail(track.coverUrl)) {
-                val upgraded = runCatchingCancellable { graph.artwork.find(track.artist, track.title) }.getOrNull()
-                if (upgraded != null) {
-                    graph.db.tracks().setCover(trackId, upgraded)
-                    upgraded
-                } else track.artworkUrl
-            } else {
-                track.artworkUrl
-            }
+            // Use YouTube Music's own artwork URL directly (no external artwork web pages required for downloads)
+            val coverUrl = track.artworkUrl
             coverUrl?.let { url -> downloadCover(repo, url, File(repo.coversDir, "$base.jpg")) }?.let { cover ->
                 dao.upsert(done.copy(coverPath = cover.absolutePath, sizeBytes = done.sizeBytes + cover.length()))
             }

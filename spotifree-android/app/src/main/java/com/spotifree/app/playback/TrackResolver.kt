@@ -14,6 +14,9 @@ import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import com.spotifree.app.data.db.AppDatabase
+import com.spotifree.app.data.db.DownloadEntity
+import com.spotifree.app.data.db.DownloadState
+import com.spotifree.app.data.download.DownloadRepository
 import com.spotifree.app.data.library.LibraryRepository
 import com.spotifree.app.data.prefs.SettingsRepository
 import com.spotifree.app.data.remote.NewPipeDownloader
@@ -40,11 +43,12 @@ class TrackResolver(
     private val context: Context,
     private val db: AppDatabase,
     private val library: LibraryRepository,
+    private val downloads: DownloadRepository,
     private val streams: StreamResolver,
     private val settings: SettingsRepository,
 ) : ResolvingDataSource.Resolver {
 
-    /** Video ids whose extractor URL failed: the next attempt goes straight to the fallback clients. */
+    /** Video ids whose primary stream URL failed: the next attempt rotates to fallback clients. */
     val avoidNewPipe: MutableSet<String> = Collections.synchronizedSet(HashSet())
 
     override fun resolveDataSpec(dataSpec: DataSpec): DataSpec {
@@ -53,26 +57,41 @@ class TrackResolver(
         return runBlocking { resolve(dataSpec, trackId, uri) }
     }
 
+    private suspend fun localDownloadUri(d: DownloadEntity?): Uri? {
+        val path = d?.filePath ?: return null
+        if (d.state != DownloadState.DONE) return null
+        val file = File(path)
+        if (!file.exists() || file.length() <= 0L) return null
+        db.downloads().touch(d.trackId)
+        return Uri.fromFile(file)
+    }
+
     private suspend fun resolve(dataSpec: DataSpec, trackId: String, uri: Uri): DataSpec {
-        // 1. Download
-        db.downloads().get(trackId)?.let { d ->
-            val path = d.filePath
-            if (d.state == com.spotifree.app.data.db.DownloadState.DONE && path != null && File(path).exists()) {
-                db.downloads().touch(trackId)
-                return dataSpec.withUri(Uri.fromFile(File(path)))
-            }
-        }
+        // 1. Exact download match (instant local playback, even on Wi-Fi)
+        localDownloadUri(db.downloads().get(trackId))?.let { return dataSpec.withUri(it) }
+
         var track = library.track(trackId)
-        // 2. Local file
+        var videoId = track?.youtubeId ?: uri.getQueryParameter("v")
+
+        // 2. Canonical download match across different IDs (e.g. search/radio "yt-..." matching a downloaded "spotify-..." or same song)
+        val matchedDownload = downloads.index.value.find(trackId, videoId, track?.artist, track?.title)
+            ?: videoId?.let { db.downloads().getDoneByVideoId(it) }
+        localDownloadUri(matchedDownload)?.let { return dataSpec.withUri(it) }
+
+        // 3. Local device file
         val local = track?.localUri
         if (local != null) return dataSpec.withUri(Uri.parse(local))
 
-        // 3. YouTube
-        var videoId = track?.youtubeId ?: uri.getQueryParameter("v")
+        // 4. YouTube stream
         if (videoId == null && track != null) {
             if (settings.current.offlineMode) throw TrackUnavailableException(trackId, "offline")
             track = library.resolveOnYouTube(track)
             videoId = track?.youtubeId
+            if (videoId != null) {
+                val resolvedDownload = downloads.index.value.find(trackId, videoId, track?.artist, track?.title)
+                    ?: db.downloads().getDoneByVideoId(videoId)
+                localDownloadUri(resolvedDownload)?.let { return dataSpec.withUri(it) }
+            }
         }
         if (videoId == null) throw TrackUnavailableException(trackId, "not_found")
 

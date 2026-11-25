@@ -30,6 +30,49 @@ enum class AddResult { ADDED, ALREADY_THERE, FAILED }
 data class PlaylistSnapshot(val playlist: PlaylistEntity, val trackIds: List<String>)
 
 /**
+ * Matches tracks across different IDs (e.g. "spotify-..." in a playlist vs "yt-..." in search)
+ * by exact id, YouTube videoId, or normalized primary artist + title.
+ */
+data class TrackMatchIndex(
+    val ids: Set<String> = emptySet(),
+    val byVideoId: Map<String, String> = emptyMap(),
+    val byArtistTitle: Map<String, String> = emptyMap(),
+) {
+    fun canonicalId(track: Track): String? {
+        if (track.id in ids) return track.id
+        track.youtubeId?.let { vid -> byVideoId[vid]?.let { return it } }
+        normalizedKey(track.artist, track.title)?.let { key -> byArtistTitle[key]?.let { return it } }
+        return null
+    }
+
+    operator fun contains(track: Track): Boolean = canonicalId(track) != null
+
+    companion object {
+        fun fromTracks(list: List<Track>): TrackMatchIndex {
+            val ids = HashSet<String>(list.size)
+            val byVid = HashMap<String, String>(list.size)
+            val byKey = HashMap<String, String>(list.size)
+            for (t in list) {
+                ids += t.id
+                t.youtubeId?.let { byVid.putIfAbsent(it, t.id) }
+                normalizedKey(t.artist, t.title)?.let { byKey.putIfAbsent(it, t.id) }
+            }
+            return TrackMatchIndex(ids, byVid, byKey)
+        }
+
+        fun normalizedKey(artist: String?, title: String?): String? {
+            if (title.isNullOrBlank()) return null
+            val t = MusicRepository.normalize(MusicRepository.cleanTrackTitle(title))
+            if (t.length < 2) return null
+            val rawArtist = artist.orEmpty().split(Regex(""",|&|\bfeat\.?|\bft\.?|\bx\b|\by\b""", RegexOption.IGNORE_CASE)).firstOrNull().orEmpty()
+            val a = MusicRepository.normalize(YouTubeIds.cleanArtist(rawArtist))
+            if (a.isBlank()) return null
+            return "$a|$t"
+        }
+    }
+}
+
+/**
  * The user's library: songs, likes, playlists, followed and blocked artists, history.
  * Everything lives in Room, so a library of tens of thousands of songs costs nothing to keep.
  */
@@ -44,6 +87,10 @@ class LibraryRepository(
 
     val likedIds: StateFlow<Set<String>> = likes.observeLikedIds().map { it.toSet() }
         .stateIn(scope, SharingStarted.Eagerly, emptySet())
+
+    val likedIndex: StateFlow<TrackMatchIndex> = likes.observeLikedTracks()
+        .map { list -> TrackMatchIndex.fromTracks(list.map { it.toTrack() }) }
+        .stateIn(scope, SharingStarted.Eagerly, TrackMatchIndex())
 
     val blockedArtists: StateFlow<Set<String>> = db.blocks().observeArtists().map { list -> list.map { it.key }.toSet() }
         .stateIn(scope, SharingStarted.Eagerly, emptySet())
@@ -113,10 +160,13 @@ class LibraryRepository(
 
     suspend fun isLiked(trackId: String) = likes.isLiked(trackId)
 
+    fun isLikedTrack(track: Track): Boolean = track in likedIndex.value
+
     /** @return true when the song is now liked */
     suspend fun toggleLike(track: Track): Boolean {
-        return if (likes.isLiked(track.id)) {
-            likes.delete(track.id)
+        val existingId = likedIndex.value.canonicalId(track)
+        return if (existingId != null || likes.isLiked(track.id)) {
+            likes.delete(existingId ?: track.id)
             false
         } else {
             save(track)
@@ -127,9 +177,13 @@ class LibraryRepository(
 
     suspend fun setLiked(track: Track, liked: Boolean) {
         if (liked) {
+            if (likedIndex.value.canonicalId(track) != null) return
             save(track)
             likes.insert(LikeEntity(track.id))
-        } else likes.delete(track.id)
+        } else {
+            val existingId = likedIndex.value.canonicalId(track) ?: track.id
+            likes.delete(existingId)
+        }
     }
 
     suspend fun createPlaylist(

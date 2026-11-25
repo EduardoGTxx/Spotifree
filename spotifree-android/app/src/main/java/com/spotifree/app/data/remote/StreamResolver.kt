@@ -45,11 +45,13 @@ data class ResolvedStream(
 class StreamUnavailableException(val reason: String) : Exception(reason)
 
 /**
- * Turns a YouTube video id into a direct audio URL.
- *  1. NewPipe Extractor (primary).
- *  2. Direct InnerTube "player" call with the clients that still return plain URLs (VISIONOS,
- *     then IOS / ANDROID_VR) - the same chain the previous app used, kept as an automatic
- *     fallback for when YouTube breaks the extractor before a new version is released.
+ * Turns a YouTube Music / YouTube video id directly into an audio stream URL without any external
+ * third-party converter websites:
+ *  1. Direct YouTube Music / YouTube InnerTube "player" API calls (ANDROID_VR, IOS, VISIONOS)
+ *     using a short per-request timeout so playback and downloads start in ~200-400 ms with zero
+ *     HTML scraping or JS deobfuscation.
+ *  2. In-app NewPipe Extractor fallback (also talks directly to YouTube) when a video requires
+ *     signature deobfuscation.
  * Results are cached until shortly before the URL expires.
  */
 class StreamResolver(
@@ -58,6 +60,12 @@ class StreamResolver(
 ) {
     private val cache = ConcurrentHashMap<String, ResolvedStream>()
     private val json = Json { ignoreUnknownKeys = true }
+    /** Fast client for InnerTube player JSON calls so a stalled endpoint never delays playback for 25-60s. */
+    private val fastHttp: OkHttpClient = http.newBuilder()
+        .connectTimeout(6, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
+        .callTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
 
     fun cached(videoId: String): ResolvedStream? =
         cache[videoId]?.takeIf { it.expiresAt - System.currentTimeMillis() > 10 * 60_000 }
@@ -67,37 +75,36 @@ class StreamResolver(
     }
 
     /**
-     * @param avoidNewPipe skip the extractor (its URL just failed with 403 / an error)
+     * @param avoidNewPipe when retrying after a 403 / playback error, skip the primary client and rotate fallbacks
+     * @param excludeClients optional client IDs that just failed (e.g. HTTP 403 during download)
      */
-    suspend fun resolve(videoId: String, quality: String, avoidNewPipe: Boolean = false): ResolvedStream =
+    suspend fun resolve(
+        videoId: String,
+        quality: String,
+        avoidNewPipe: Boolean = false,
+        excludeClients: Set<String> = emptySet(),
+    ): ResolvedStream =
         withContext(Dispatchers.IO) {
-            if (!avoidNewPipe) cached(videoId)?.let { return@withContext it }
+            if (!avoidNewPipe && excludeClients.isEmpty()) cached(videoId)?.let { return@withContext it }
 
-            // 1. Try high-performance native Rust core stream resolver
-            if (!avoidNewPipe) {
+            var lastError: Throwable? = null
+            // 1. Direct InnerTube clients first (fast, ~200-400ms, no JS engine overhead, direct YouTube Music audio)
+            val orderedClients = if (avoidNewPipe) CLIENTS.drop(1) + CLIENTS.take(1) else CLIENTS
+            for (client in orderedClients) {
+                if (client.id in excludeClients) continue
                 try {
-                    val native = uniffi.spotifree_core_ffi.resolveStreamUrl(videoId)
-                    val resolved = ResolvedStream(
-                        videoId = native.videoId,
-                        url = native.url,
-                        mimeType = native.mimeType,
-                        itag = native.itag,
-                        userAgent = "com.google.android.apps.youtube.music/6.42.52 (Linux; U; Android 14)",
-                        expiresAt = expiryOf(native.url),
-                        client = "RUST_INNERTUBE",
-                        loudnessDb = null,
-                        contentLength = -1L
-                    )
-                    return@withContext resolved.also { remember(it) }
+                    return@withContext viaInnerTube(videoId, quality, client).also { remember(it) }
                 } catch (ec: kotlin.coroutines.cancellation.CancellationException) {
                     throw ec
                 } catch (e: Throwable) {
-                    Log.d(TAG, "Rust Core stream resolver fallback to JVM extractor: ${e.message}")
+                    lastError = e
+                    Log.d(TAG, "InnerTube ${client.id} could not resolve $videoId: ${e.message}")
+                    if (e is StreamUnavailableException && e.reason == "protected") throw e
                 }
             }
 
-            var lastError: Throwable? = null
-            if (!avoidNewPipe) {
+            // 2. In-app NewPipe Extractor fallback for ciphered / web-only videos
+            if ("newpipe" !in excludeClients) {
                 try {
                     return@withContext viaNewPipe(videoId, quality).also { remember(it) }
                 } catch (ec: kotlin.coroutines.cancellation.CancellationException) {
@@ -106,16 +113,6 @@ class StreamResolver(
                     lastError = e
                     Log.w(TAG, "NewPipe could not resolve $videoId: ${e.message}")
                     if (isDefinitive(e)) throw StreamUnavailableException("protected")
-                }
-            }
-            for (client in CLIENTS) {
-                try {
-                    return@withContext viaInnerTube(videoId, quality, client).also { remember(it) }
-                } catch (ec: kotlin.coroutines.cancellation.CancellationException) {
-                    throw ec
-                } catch (e: Throwable) {
-                    lastError = e
-                    if (e is StreamUnavailableException && e.reason == "protected") throw e
                 }
             }
             throw (lastError as? StreamUnavailableException) ?: StreamUnavailableException(lastError?.message ?: "no_formats")
@@ -204,7 +201,7 @@ class StreamResolver(
             .header("X-YouTube-Client-Version", client.clientVersion)
             .apply { client.extraHeaders.forEach { (k, v) -> header(k, v) } }
             .build()
-        val text = http.newCall(req).execute().use { r ->
+        val text = fastHttp.newCall(req).execute().use { r ->
             if (!r.isSuccessful) throw StreamUnavailableException("http_${r.code}")
             r.body?.string() ?: throw StreamUnavailableException("empty")
         }
@@ -267,15 +264,15 @@ class StreamResolver(
 
         private val CLIENTS = listOf(
             Client(
-                id = "VISIONOS",
+                id = "ANDROID_VR",
                 endpoint = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
-                userAgent = VISIONOS_UA,
-                clientNameNumber = "101",
-                clientVersion = "1.02",
+                userAgent = ANDROID_VR_UA,
+                clientNameNumber = "28",
+                clientVersion = "1.65.10",
                 context = buildJsonObject {
-                    put("clientName", "VISIONOS"); put("clientVersion", "1.02")
-                    put("deviceMake", "Apple"); put("deviceModel", "RealityDevice17,1")
-                    put("osName", "visionOS"); put("osVersion", "26.5.23O471")
+                    put("clientName", "ANDROID_VR"); put("clientVersion", "1.65.10")
+                    put("deviceMake", "Oculus"); put("deviceModel", "Quest 3")
+                    put("androidSdkVersion", 32); put("osName", "Android"); put("osVersion", "12L")
                     put("hl", "en"); put("gl", "US")
                 },
                 extraHeaders = mapOf("Origin" to "https://www.youtube.com"),
@@ -293,15 +290,15 @@ class StreamResolver(
                 extraHeaders = mapOf("Origin" to "https://music.youtube.com", "Referer" to "https://music.youtube.com/"),
             ),
             Client(
-                id = "ANDROID_VR",
+                id = "VISIONOS",
                 endpoint = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
-                userAgent = ANDROID_VR_UA,
-                clientNameNumber = "28",
-                clientVersion = "1.65.10",
+                userAgent = VISIONOS_UA,
+                clientNameNumber = "101",
+                clientVersion = "1.02",
                 context = buildJsonObject {
-                    put("clientName", "ANDROID_VR"); put("clientVersion", "1.65.10")
-                    put("deviceMake", "Oculus"); put("deviceModel", "Quest 3")
-                    put("androidSdkVersion", 32); put("osName", "Android"); put("osVersion", "12L")
+                    put("clientName", "VISIONOS"); put("clientVersion", "1.02")
+                    put("deviceMake", "Apple"); put("deviceModel", "RealityDevice17,1")
+                    put("osName", "visionOS"); put("osVersion", "26.5.23O471")
                     put("hl", "en"); put("gl", "US")
                 },
                 extraHeaders = mapOf("Origin" to "https://www.youtube.com"),

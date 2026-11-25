@@ -15,7 +15,9 @@ import androidx.work.WorkManager
 import com.spotifree.app.data.db.AppDatabase
 import com.spotifree.app.data.db.DownloadEntity
 import com.spotifree.app.data.db.DownloadState
+import com.spotifree.app.data.db.DownloadWithTrack
 import com.spotifree.app.data.library.LibraryRepository
+import com.spotifree.app.data.library.TrackMatchIndex
 import com.spotifree.app.data.model.Track
 import com.spotifree.app.data.prefs.SettingsRepository
 import com.spotifree.app.data.remote.StreamResolver
@@ -30,6 +32,59 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import java.io.File
 import java.util.concurrent.TimeUnit
+
+/** Lookup index for downloads matching by trackId, YouTube videoId, or normalized artist + title. */
+data class DownloadMatchIndex(
+    val byId: Map<String, DownloadEntity> = emptyMap(),
+    val byVideoId: Map<String, DownloadEntity> = emptyMap(),
+    val byArtistTitle: Map<String, DownloadEntity> = emptyMap(),
+) {
+    fun find(track: Track): DownloadEntity? =
+        find(track.id, track.youtubeId, track.artist, track.title)
+
+    fun find(trackId: String, videoId: String?, artist: String?, title: String?): DownloadEntity? {
+        byId[trackId]?.let { return it }
+        val vid = videoId ?: when {
+            trackId.startsWith("yt-rec-") -> trackId.removePrefix("yt-rec-")
+            trackId.startsWith("yt-") -> trackId.removePrefix("yt-")
+            else -> null
+        }
+        vid?.let { byVideoId[it]?.let { d -> return d } }
+        TrackMatchIndex.normalizedKey(artist, title)?.let { byArtistTitle[it]?.let { d -> return d } }
+        return null
+    }
+
+    fun isDone(track: Track): Boolean = find(track)?.state == DownloadState.DONE
+
+    companion object {
+        fun from(rows: List<DownloadWithTrack>): DownloadMatchIndex {
+            val byId = HashMap<String, DownloadEntity>(rows.size)
+            val byVid = HashMap<String, DownloadEntity>(rows.size)
+            val byKey = HashMap<String, DownloadEntity>(rows.size)
+            // Prefer DONE over RUNNING/QUEUED over FAILED when multiple rows share a videoId/key
+            val sorted = rows.sortedByDescending {
+                when (it.download.state) {
+                    DownloadState.DONE -> 3
+                    DownloadState.RUNNING -> 2
+                    DownloadState.QUEUED -> 1
+                    else -> 0
+                }
+            }
+            for (row in sorted) {
+                val d = row.download
+                byId[d.trackId] = d
+                val vid = row.videoId ?: when {
+                    d.trackId.startsWith("yt-rec-") -> d.trackId.removePrefix("yt-rec-")
+                    d.trackId.startsWith("yt-") -> d.trackId.removePrefix("yt-")
+                    else -> null
+                }
+                vid?.let { byVid.putIfAbsent(it, d) }
+                TrackMatchIndex.normalizedKey(row.artist, row.title)?.let { byKey.putIfAbsent(it, d) }
+            }
+            return DownloadMatchIndex(byId, byVid, byKey)
+        }
+    }
+}
 
 /**
  * Offline downloads. Each song is a WorkManager job (survives the app being closed, respects
@@ -52,8 +107,18 @@ class DownloadRepository(
     val all: StateFlow<Map<String, DownloadEntity>> = dao.observeAll().map { list -> list.associateBy { it.trackId } }
         .stateIn(scope, SharingStarted.Eagerly, emptyMap())
 
+    val index: StateFlow<DownloadMatchIndex> = dao.observeAllWithTracks()
+        .map { DownloadMatchIndex.from(it) }
+        .stateIn(scope, SharingStarted.Eagerly, DownloadMatchIndex())
+
     val doneIds: StateFlow<Set<String>> = dao.observeDoneIds().map { it.toSet() }
         .stateIn(scope, SharingStarted.Eagerly, emptySet())
+
+    fun findDownload(track: Track): DownloadEntity? = index.value.find(track)
+
+    fun isDownloaded(track: Track): Boolean = index.value.isDone(track)
+
+    suspend fun doneTracks(): List<Track> = dao.doneTracks().map { it.toTrack() }
 
     fun observeDownloadedTracks(): Flow<List<Track>> = dao.observeDoneTracks().map { l -> l.map { it.toTrack() } }
 
@@ -67,7 +132,7 @@ class DownloadRepository(
     suspend fun enqueue(track: Track, manual: Boolean = true) {
         if (track.isLocal || settings.current.offlineMode) return
         library.save(track)
-        val existing = dao.get(track.id)
+        val existing = dao.get(track.id) ?: index.value.find(track)
         if (existing?.state == DownloadState.DONE) {
             if (manual && !existing.isManual) dao.upsert(existing.copy(isManual = true))
             return
@@ -122,7 +187,7 @@ class DownloadRepository(
     suspend fun onPlayed(track: Track, seconds: Int, durationSec: Int) {
         if (!settings.current.autoCacheOnPlay || track.isLocal) return
         if (durationSec > 0 && seconds < durationSec * 0.8) return
-        if (dao.get(track.id) != null) return
+        if (dao.get(track.id) != null || index.value.find(track) != null) return
         enqueue(track, manual = false)
     }
 
@@ -145,7 +210,7 @@ class DownloadRepository(
 
     /** Copies a downloaded song to Music/Spotifree so other players can use it. */
     suspend fun exportToMusic(track: Track): Boolean = withContext(Dispatchers.IO) {
-        val d = dao.get(track.id) ?: return@withContext false
+        val d = dao.get(track.id) ?: index.value.find(track) ?: return@withContext false
         val src = d.filePath?.let { File(it) }?.takeIf { it.exists() } ?: return@withContext false
         val ext = src.extension.ifBlank { "m4a" }
         val values = ContentValues().apply {

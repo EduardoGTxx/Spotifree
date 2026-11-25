@@ -129,13 +129,15 @@ fun PlaylistScreen(id: String, onBack: () -> Unit) {
         else -> playlist?.title.orEmpty()
     }
     val all = tracks.orEmpty()
-    val shown = remember(all, query, sort) {
-        val f = all.filter { matches(query, it.title, it.artist, it.album) }
+    val allSorted = remember(all, sort) {
         when (sort) {
-            Sort.DEFAULT -> f
-            Sort.TITLE -> f.sortedBy { it.title.lowercase() }
-            Sort.ARTIST -> f.sortedBy { it.artist.lowercase() }
+            Sort.DEFAULT -> all
+            Sort.TITLE -> all.sortedBy { it.title.lowercase() }
+            Sort.ARTIST -> all.sortedBy { it.artist.lowercase() }
         }
+    }
+    val shown = remember(allSorted, query) {
+        if (query.isBlank()) allSorted else allSorted.filter { matches(query, it.title, it.artist, it.album) }
     }
     val totalSec = all.sumOf { it.durationSec }
     val subtitle = buildString {
@@ -235,7 +237,14 @@ fun PlaylistScreen(id: String, onBack: () -> Unit) {
             itemsIndexed(shown) { i, tr ->
                 TrackRow(
                     tr,
-                    onClick = { actions.play(shown, i) },
+                    onClick = {
+                        if (query.isNotBlank() && allSorted.size > 1) {
+                            // Keep the tapped search match first and queue the rest of the folder after it
+                            actions.play(listOf(tr) + allSorted.filter { it.id != tr.id }, 0)
+                        } else {
+                            actions.play(shown, i)
+                        }
+                    },
                     isCurrent = player.current?.id == tr.id,
                     onMore = { actions.showMenu(tr, MenuContext(playlistId = if (isLiked) null else id)) },
                 )

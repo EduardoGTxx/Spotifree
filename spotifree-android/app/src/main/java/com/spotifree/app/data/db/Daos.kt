@@ -207,16 +207,32 @@ interface BlockDao {
     suspend fun unblockTrack(trackId: String)
 }
 
+data class DownloadWithTrack(
+    @Embedded val download: DownloadEntity,
+    val title: String?,
+    val artist: String?,
+    val videoId: String?,
+)
+
 @Dao
 interface DownloadDao {
     @Query("SELECT * FROM downloads")
     fun observeAll(): Flow<List<DownloadEntity>>
+
+    @Query("SELECT d.*, t.title AS title, t.artist AS artist, t.videoId AS videoId FROM downloads d LEFT JOIN tracks t ON t.id = d.trackId")
+    fun observeAllWithTracks(): Flow<List<DownloadWithTrack>>
 
     @Query("SELECT trackId FROM downloads WHERE state = 2")
     fun observeDoneIds(): Flow<List<String>>
 
     @Query("SELECT t.* FROM downloads d JOIN tracks t ON t.id = d.trackId WHERE d.state = 2 ORDER BY d.savedAt DESC")
     fun observeDoneTracks(): Flow<List<TrackEntity>>
+
+    @Query("SELECT t.* FROM downloads d JOIN tracks t ON t.id = d.trackId WHERE d.state = 2 ORDER BY d.savedAt DESC")
+    suspend fun doneTracks(): List<TrackEntity>
+
+    @Query("SELECT d.* FROM downloads d JOIN tracks t ON t.id = d.trackId WHERE d.state = 2 AND (t.videoId = :videoId OR t.id = 'yt-' || :videoId) LIMIT 1")
+    suspend fun getDoneByVideoId(videoId: String): DownloadEntity?
 
     @Query("SELECT * FROM downloads WHERE trackId = :trackId")
     suspend fun get(trackId: String): DownloadEntity?

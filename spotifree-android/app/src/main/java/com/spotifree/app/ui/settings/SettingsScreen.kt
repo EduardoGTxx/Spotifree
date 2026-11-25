@@ -237,11 +237,17 @@ fun SettingsScreen(onBack: () -> Unit) {
             // ---------------------------------------------------------- downloads
             item {
                 SettingsCard(t("offlineSection"), Icons.Default.DownloadForOffline) {
-                    SettingSwitch(t("offlineModeLabel"), t("offlineModeDesc"), s.offlineMode) { v -> set { it.copy(offlineMode = v) } }
+                    SettingSwitch(t("offlineModeLabel"), t("offlineModeDesc"), s.offlineMode) { v ->
+                        val conn = com.spotifree.app.playback.Network.currentConnection(context)
+                        set { com.spotifree.app.playback.NetworkPolicy.onManualOfflineToggle(it, v, conn) }
+                    }
                     SettingChoice(t("offlineQualityLabel"), t("qualityDesc"),
                         listOf("saving" to t("qualitySaving"), "normal" to t("qualityNormal"), "high" to t("qualityHigh")), s.audioQuality) { v -> set { it.copy(audioQuality = v) } }
                     SettingSwitch(t("wifiOnlyLabel"), null, s.downloadOnlyWifi) { v -> set { it.copy(downloadOnlyWifi = v) } }
-                    SettingSwitch(t("allowMobileDataLabel"), t("allowMobileDataDesc"), s.allowMobileData) { v -> set { it.copy(allowMobileData = v) } }
+                    SettingSwitch(t("allowMobileDataLabel"), t("allowMobileDataDesc"), s.allowMobileData) { v ->
+                        val conn = com.spotifree.app.playback.Network.currentConnection(context)
+                        set { com.spotifree.app.playback.NetworkPolicy.onManualAllowMobileDataToggle(it, v, conn) }
+                    }
                     SettingSwitch(t("autoCacheLabel"), t("autoCacheDesc"), s.autoCacheOnPlay) { v -> set { it.copy(autoCacheOnPlay = v) } }
                     SettingSwitch(t("autoDownloadLikedLabel"), t("autoDownloadLikedDesc"), s.autoDownloadLiked) { v -> set { it.copy(autoDownloadLiked = v) } }
                     SettingSlider(t("cacheLimitLabel"), { mb -> if (mb >= 1024) "%.1f GB".format(mb / 1024f) else "${mb.toInt()} MB" }, s.cacheSizeMb.toFloat(), 256f..8192f, 30,
