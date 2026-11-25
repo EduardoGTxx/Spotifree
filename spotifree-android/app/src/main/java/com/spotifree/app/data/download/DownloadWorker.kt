@@ -82,8 +82,15 @@ class DownloadWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 isManual = row.isManual,
             )
             dao.upsert(done)
-            // Use YouTube Music's own artwork URL directly (no external artwork web pages required for downloads)
-            val coverUrl = track.artworkUrl
+            val coverUrl = if (YouTubeIds.isLowResVideoThumbnail(track.coverUrl)) {
+                val upgraded = runCatchingCancellable { graph.artwork.find(track.artist, track.title) }.getOrNull()
+                if (upgraded != null) {
+                    graph.db.tracks().setCover(trackId, upgraded)
+                    upgraded
+                } else track.artworkUrl
+            } else {
+                track.artworkUrl
+            }
             coverUrl?.let { url -> downloadCover(repo, url, File(repo.coversDir, "$base.jpg")) }?.let { cover ->
                 dao.upsert(done.copy(coverPath = cover.absolutePath, sizeBytes = done.sizeBytes + cover.length()))
             }
